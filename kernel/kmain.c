@@ -9,6 +9,9 @@
 #include <airlys/heap.h>
 #include <airlys/sched.h>
 #include <airlys/syscall.h>
+#include <airlys/vfs.h>
+#include <airlys/ramfs.h>
+#include <airlys/shell.h>
 
 static void aira_sentinel_task(void) {
     /* Background Sovereign Sentinel Health Daemon */
@@ -106,7 +109,17 @@ void kernel_main(uint64_t magic, uint64_t addr) {
         vga_puts("] running\n");
     }
 
-    /* Step 11: Enable CPU Hardware Interrupts */
+    /* Step 11: Phase 5 - Virtual File System (VFS) & In-Memory RamFS */
+    vfs_init();
+    ramfs_init();
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts(" [OK] Virtual File System (VFS)  : In-Memory RamFS mounted on '/'\n");
+
+    /* Step 12: Phase 5 - Interactive Userland Shell (airlys-sh) */
+    shell_init();
+    vga_puts(" [OK] Sovereign Userland Shell   : airlys-sh active & command dispatcher ready\n");
+
+    /* Step 13: Enable CPU Hardware Interrupts */
     __asm__ volatile ("sti");
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
     vga_puts(" [OK] Hardware Interrupts Active : STI executed (IF=1)\n");

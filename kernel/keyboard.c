@@ -3,6 +3,7 @@
 #include <airlys/io.h>
 #include <airlys/vga.h>
 #include <airlys/pic.h>
+#include <airlys/shell.h>
 
 #define KBD_DATA_PORT 0x60
 
@@ -61,12 +62,7 @@ static void keyboard_callback(registers_t* regs) {
     if (scancode < 128) {
         char c = shift_pressed ? kbd_scancode_shift[scancode] : kbd_scancode_normal[scancode];
         if (c != 0) {
-            if (c == '\n') {
-                vga_putchar('\n');
-                vga_print_prompt();
-            } else {
-                vga_putchar(c);
-            }
+            shell_handle_char(c);
         }
     }
 }

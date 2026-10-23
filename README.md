@@ -134,10 +134,10 @@ qemu-system-x86_64 -kernel bin/airlys.elf
   - [x] Callee-saved context switch (`task_switch` in pure x86_64 assembly)
   - [x] Sovereign System Call Gateway dispatcher (Ring 0 / Ring 3)
 
-- [ ] **Phase 5: Virtual File System & Userland**
-  - [ ] VFS abstraction layer
-  - [ ] Initial RAMDisk (initrd / TarFS)
-  - [ ] Interactive `airlys-sh` userland shell
+- [x] **Phase 5: Virtual File System & Userland**
+  - [x] VFS abstraction layer (`read`, `write`, `finddir`, `readdir`, recursive path resolution)
+  - [x] In-Memory RamFS mounted on `/` (`/etc`, `/bin`, `/home/user`, `/dev`, `/etc/os-release`, `/etc/covenant.txt`)
+  - [x] Interactive `airlys-sh` userland shell with full command dispatcher (`help`, `clear`, `ls`, `cat`, `echo`, `whoami`, `uname`, `free`, `ps`, `covenant`, `aira`, `reboot`)
 
 - [ ] **Phase 6: Sovereign Network Stack & AiraLang Engine**
   - [ ] Gigabit Ethernet Driver (VirtIO-Net / Intel e1000)

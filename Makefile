@@ -30,6 +30,9 @@ C_SRCS      := kernel/kmain.c \
                kernel/heap.c \
                kernel/sched.c \
                kernel/syscall.c \
+               kernel/vfs.c \
+               kernel/ramfs.c \
+               kernel/shell.c \
                arch/x86_64/idt.c
 
 ASM_SRCS    := arch/x86_64/boot.s \
