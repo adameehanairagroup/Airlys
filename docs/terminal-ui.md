@@ -45,6 +45,27 @@
 
 ---
 
+## ⚡ The Sovereign Privilege System: `aira` (Replacing `sudo`)
+- In Airlys, legacy Unix `sudo` ("SuperUser DO") is replaced by **`aira`** as the native root/elevation authority.
+- **Command Syntax:**
+  ```bash
+  aira <command>
+  ```
+- **Live Example:**
+  ```text
+  ┌──(user㉿airlys-os)-[~]
+  └─Airlys >> aira service restart network
+  [Aira Sovereign Guard] Authenticating root privileges for user...
+  [OK] Elevated execution granted.
+  ```
+- **Backward Compatibility:** Symlink `sudo -> aira` ensures legacy Linux scripts and developer muscle memory execute flawlessly without breakage.
+
+---
+
+## 🛡️ Sovereign Cyber Security & Ethical Hacking Arsenal
+- Built-in / 1-Click AiraStore support for full pentesting, packet auditing & digital defense tools (Nmap, Wireshark, Metasploit-compatible suite).
+- **AI-Powered Pentesting:** Directly invoke Aira to analyze open ports, sniff malicious packets, or audit source code vulnerabilities natively in terminal!
+
 ## 🕹️ Interactive Session Preview
 
 ```text
