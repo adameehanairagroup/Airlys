@@ -1,4 +1,4 @@
-# 🌌 AIRLYS: Sovereign AI-Native Operating System Kernel
+# 🌌 AIRLYS: AI-Native Operating System Kernel
 
 <div align="center">
 
