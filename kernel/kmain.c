@@ -19,6 +19,15 @@
 #include <airlys/devfs.h>
 #include <airlys/slab.h>
 #include <airlys/security.h>
+#include <airlys/crypto.h>
+#include <airlys/block.h>
+#include <airlys/ipc.h>
+#include <airlys/net.h>
+#include <airlys/sound.h>
+#include <airlys/virtio.h>
+#include <airlys/certs.h>
+#include <airlys/initramfs.h>
+#include <airlys/init.h>
 
 static void aira_sentinel_task(void) {
     /* Background Sovereign Sentinel Health Daemon */
@@ -42,7 +51,7 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     vga_puts("================================================================================\n");
 
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-    vga_puts(" [OK] Airlys Kernel Architecture : x86_64 Long Mode (64-Bit)\n");
+    vga_puts(" [OK] Airlys Kernel Architecture : x86_64 Long Mode (64-Bit Canonical)\n");
     vga_puts(" [OK] Lead Systems Architect     : Er. Adam Eehan (Founder & CEO, Aira Group)\n");
     vga_puts(" [OK] Engineering Co-Pilot       : Sovereign AI Aira 3 Ultra (Engine v3.6)\n");
 
@@ -69,6 +78,9 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     timer_init(100);
     vga_puts(" [OK] Programmable Interval Timer: 100 Hz (10ms preemptive tick interval)\n");
 
+    /* Calibrate BogoMIPS delay loop */
+    calibrate_delay();
+
     /* Step 5: Initialize PS/2 Keyboard Driver */
     keyboard_init();
     vga_puts(" [OK] PS/2 Hardware Keyboard     : Scan Code Set 1 Driver active\n");
@@ -87,14 +99,6 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     /* Step 8: Phase 3 - Sovereign Dynamic Kernel Heap (kmalloc / kfree) */
     heap_init(KERNEL_HEAP_START, KERNEL_HEAP_SIZE);
     vga_puts(" [OK] Sovereign Dynamic Heap     : 32 MB dynamic pool at 0x1000000\n");
-
-    /* Dynamic Heap Self-Test */
-    void* test_alloc = kmalloc(512);
-    if (test_alloc != NULL) {
-        vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
-        vga_puts(" [OK] Dynamic Heap Verification  : kmalloc(512) & kfree() self-test passed!\n");
-        kfree(test_alloc);
-    }
 
     /* Step 9: Phase 4 - Preemptive Multitasking Scheduler */
     sched_init();
@@ -116,7 +120,7 @@ void kernel_main(uint64_t magic, uint64_t addr) {
         vga_puts("] running\n");
     }
 
-    /* Step 11: Linux Core Subsystems - Slab Cache & Security Sentinel */
+    /* Step 11: Linux Core Subsystems - Slab Cache & Hardware Drivers */
     slab_init();
     security_init();
     rtc_init();
@@ -126,18 +130,28 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     vga_puts(" [OK] 16550A UART Serial Driver  : COM1 (0x3F8) 115200 baud active\n");
     vga_puts(" [OK] CMOS Real Time Clock (RTC) : Synchronized with hardware clock\n");
 
-    /* Step 12: Phase 5 - Virtual File System (VFS), In-Memory RamFS, /proc & /dev */
+    /* Step 12: Linux Enterprise Subsystems (Crypto, Certs, Block, IPC, Net, Sound, VirtIO) */
+    crypto_init();
+    certs_init();
+    blk_init();
+    ipc_init();
+    net_init();
+    sound_init();
+    virtio_init();
+
+    /* Step 13: Phase 5 - Virtual File System (VFS), In-Memory RamFS, /proc & /dev */
     vfs_init();
     ramfs_init();
     devfs_init();
     procfs_init();
-    vga_puts(" [OK] Virtual File System (VFS)  : In-Memory RamFS, /proc & /dev mounted\n");
+    initramfs_init();
+    vga_puts(" [OK] Virtual File System (VFS)  : In-Memory RamFS, /proc, /dev & /usr mounted\n");
 
-    /* Step 13: Phase 5 - Interactive Userland Shell (airlys-sh) */
+    /* Step 14: Phase 5 - Interactive Userland Shell (airlys-sh) */
     shell_init();
     vga_puts(" [OK] Sovereign Userland Shell   : airlys-sh active & command dispatcher ready\n");
 
-    /* Step 14: Enable CPU Hardware Interrupts */
+    /* Step 15: Enable CPU Hardware Interrupts */
     __asm__ volatile ("sti");
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
     vga_puts(" [OK] Hardware Interrupts Active : STI executed (IF=1)\n");

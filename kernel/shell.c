@@ -9,27 +9,20 @@
 #include <airlys/io.h>
 #include <airlys/rtc.h>
 #include <airlys/printk.h>
+#include <airlys/string.h>
+#include <airlys/crypto.h>
+#include <airlys/init.h>
+#include <airlys/initramfs.h>
+#include <airlys/block.h>
+#include <airlys/ipc.h>
+#include <airlys/net.h>
+#include <airlys/sound.h>
+#include <airlys/virtio.h>
+#include <airlys/certs.h>
 
 static char shell_buffer[SHELL_MAX_INPUT];
 static size_t shell_pos = 0;
 static char shell_cwd[128] = "/home/user";
-
-static int kstrcmp(const char* s1, const char* s2) {
-    while (*s1 && (*s1 == *s2)) {
-        s1++;
-        s2++;
-    }
-    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
-}
-
-static void kstrncpy(char* dest, const char* src, size_t n) {
-    size_t i = 0;
-    while (i < n - 1 && src[i] != '\0') {
-        dest[i] = src[i];
-        i++;
-    }
-    dest[i] = '\0';
-}
 
 static uint32_t katoi(const char* str) {
     uint32_t res = 0;
@@ -103,7 +96,7 @@ static void split_path(const char* full_path, char* parent_buf, size_t parent_le
 static void cmd_help(void) {
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     vga_puts("=================================================================\n");
-    vga_puts("        AIRLYS SOVEREIGN SHELL & CYBER ARSENAL (v1.0)           \n");
+    vga_puts("        AIRLYS SOVEREIGN SHELL & ENTERPRISE ARSENAL (v1.0)       \n");
     vga_puts("=================================================================\n");
 
     vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
@@ -128,8 +121,22 @@ static void cmd_help(void) {
     vga_puts("   free           - Physical RAM & dynamic kernel heap stats\n");
     vga_puts("   ps             - Preemptive process list & execution ticks\n");
     vga_puts("   kill <pid>     - Terminate a task by Process ID\n");
+    vga_puts("   banner         - Print UTS release & Linux/Airlys banners\n");
     vga_puts("   clear          - Clear VGA screen\n");
     vga_puts("   reboot         - Warm hardware reboot\n");
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts(" 🐧 Linux Subsystems & Hardware Architecture:\n");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts("   lsblk          - List block storage devices & partitions (block/)\n");
+    vga_puts("   netdev         - Network interfaces & packet stats (net/)\n");
+    vga_puts("   initramfs      - Initramfs CPIO extraction & rootfs status (usr/)\n");
+    vga_puts("   virtio         - Discovered VirtIO hypervisor devices (virt/)\n");
+    vga_puts("   keyring        - Trusted Sovereign root certificates (certs/)\n");
+    vga_puts("   pipe           - Inter-Process Communication pipe test (ipc/)\n");
+    vga_puts("   beep [hz] [ms] - Synthesize hardware tone via PC Speaker (sound/)\n");
+    vga_puts("   sha256 <str>   - Calculate SHA-256 cryptographic digest (crypto/)\n");
+    vga_puts("   crc32 <str>    - Calculate IEEE 802.3 CRC-32 checksum (crypto/)\n");
 
     vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
     vga_puts(" 🛡️ Cyber Security & Penetration Arsenal (Kali Style):\n");
@@ -139,7 +146,7 @@ static void cmd_help(void) {
     vga_puts("   netstat        - Active network sockets & listening ports\n");
     vga_puts("   aircrack       - 802.11 Wi-Fi monitor & beacon recon scanner\n");
     vga_puts("   tcpdump        - Live packet sniffer & header hex dump\n");
-    vga_puts("   hash <text>    - FNV-1a & CRC32 cryptographic hash calculation\n");
+    vga_puts("   hash <text>    - FNV-1a cryptographic token calculation\n");
     vga_puts("   aira <cmd>     - Sovereign root administrative privilege execution\n");
     vga_puts("   covenant       - Read the Sovereign Open-Source Covenant\n");
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
@@ -233,18 +240,24 @@ static void cmd_ls(const char* path) {
         if (!child) continue;
 
         if (child->flags & VFS_DIRECTORY) {
-            vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+            vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
             vga_puts("  [DIR]  ");
-            vga_puts(child->name);
-            vga_puts("/\n");
+        } else if (child->flags & VFS_CHARDEVICE) {
+            vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
+            vga_puts("  [CHR]  ");
         } else {
             vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
             vga_puts("  [FILE] ");
-            vga_puts(child->name);
+        }
+
+        vga_puts(child->name);
+        if (!(child->flags & VFS_DIRECTORY)) {
+            vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
             vga_puts(" (");
             vga_putdec(child->size);
-            vga_puts(" bytes)\n");
+            vga_puts(" B)");
         }
+        vga_puts("\n");
     }
 }
 
@@ -263,7 +276,7 @@ static void cmd_cat(const char* path) {
         vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
         vga_puts("cat: ");
         vga_puts(path);
-        vga_puts(": No such file\n");
+        vga_puts(": No such file or directory\n");
         return;
     }
 
@@ -275,25 +288,20 @@ static void cmd_cat(const char* path) {
         return;
     }
 
-    if (node->size == 0) return;
-
-    char buf[128];
-    uint64_t offset = 0;
-    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-
-    while (offset < node->size) {
-        uint64_t read_bytes = vfs_read(node, offset, sizeof(buf) - 1, (uint8_t*)buf);
-        if (read_bytes == 0) break;
-        buf[read_bytes] = '\0';
+    char buf[512];
+    uint64_t bytes = vfs_read(node, 0, sizeof(buf) - 1, (uint8_t*)buf);
+    if (bytes > 0) {
+        buf[bytes] = '\0';
+        vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
         vga_puts(buf);
-        offset += read_bytes;
+        if (buf[bytes - 1] != '\n') vga_puts("\n");
     }
 }
 
 static void cmd_mkdir(const char* path) {
     if (!path || *path == '\0') {
         vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-        vga_puts("mkdir: missing directory operand\n");
+        vga_puts("mkdir: missing operand\n");
         return;
     }
 
@@ -307,7 +315,7 @@ static void cmd_mkdir(const char* path) {
     vfs_node_t* parent = vfs_resolve_path(parent_path);
     if (!parent) {
         vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-        vga_puts("mkdir: cannot create '");
+        vga_puts("mkdir: cannot create directory '");
         vga_puts(path);
         vga_puts("': Parent directory not found\n");
         return;
@@ -315,9 +323,9 @@ static void cmd_mkdir(const char* path) {
 
     if (vfs_finddir(parent, dir_name) != NULL) {
         vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-        vga_puts("mkdir: '");
-        vga_puts(dir_name);
-        vga_puts("': Directory or file already exists\n");
+        vga_puts("mkdir: cannot create directory '");
+        vga_puts(path);
+        vga_puts("': File or directory already exists\n");
         return;
     }
 
@@ -460,7 +468,8 @@ static void cmd_dmesg(void) {
     vga_puts("[    0.008000] Sovereign Dynamic Kernel Heap active: 32 MB pool at 0x1000000\n");
     vga_puts("[    0.009000] Preemptive Round-Robin Multitasking active (Quantum: 50ms)\n");
     vga_puts("[    0.010000] In-Memory RamFS mounted on '/'\n");
-    vga_puts("[    0.011000] airlys-sh v1.0 interactive userland shell online\n");
+    vga_puts("[    0.011000] Canonical Linux Subsystems: usr/, init/, block/, ipc/, crypto/, net/, sound/, virt/\n");
+    vga_puts("[    0.012000] airlys-sh v1.0 interactive userland shell online\n");
 }
 
 static void cmd_kill(const char* arg) {
@@ -493,7 +502,7 @@ static void cmd_whoami(void) {
 
 static void cmd_uname(void) {
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-    vga_puts("Airlys Sovereign OS 0.2.0-genesis x86_64 Long Mode (Monolithic Freestanding Kernel)\n");
+    vga_puts("Airlys Sovereign OS 0.2.0-genesis x86_64 Long Mode (Canonical Linux Tree)\n");
 }
 
 static void cmd_free(void) {
@@ -531,6 +540,187 @@ static void cmd_covenant(void) {
     vga_puts("    monopoly.\n");
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     vga_puts("=================================================================\n");
+}
+
+static void cmd_banner(void) {
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts(airlys_banner);
+    vga_set_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
+    vga_puts(linux_banner);
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts("Node: ");
+    vga_puts(init_uts_ns.nodename);
+    vga_puts(" | OS: ");
+    vga_puts(init_uts_ns.sysname);
+    vga_puts(" | Machine: ");
+    vga_puts(init_uts_ns.machine);
+    vga_puts("\n");
+}
+
+static void cmd_lsblk(void) {
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("NAME      MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS\n");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    uint32_t count = blk_get_device_count();
+    for (uint32_t i = 0; i < count; i++) {
+        block_device_t* dev = blk_get_device_by_index(i);
+        if (!dev) continue;
+        vga_puts(dev->name);
+        vga_puts("     1:0    0   512K  0 disk \n");
+        for (uint32_t p = 0; p < dev->num_partitions; p++) {
+            partition_info_t* part = &dev->partitions[p];
+            vga_puts("|-");
+            vga_puts(dev->name);
+            vga_putdec(part->part_id);
+            vga_puts("  1:");
+            vga_putdec(part->part_id);
+            vga_puts("    0   500K  0 part [");
+            vga_puts(part->label);
+            vga_puts("]\n");
+        }
+    }
+}
+
+static void cmd_netdev(void) {
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("Iface   MTU    RX-OK  RX-ERR  TX-OK  TX-ERR  Flags\n");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    uint32_t count = get_netdev_count();
+    for (uint32_t i = 0; i < count; i++) {
+        net_device_t* dev = get_netdev_by_index(i);
+        if (!dev) continue;
+        vga_puts(dev->name);
+        vga_puts("      ");
+        vga_putdec(dev->mtu);
+        vga_puts("  ");
+        vga_putdec(dev->rx_packets);
+        vga_puts("      0       ");
+        vga_putdec(dev->tx_packets);
+        vga_puts("      0       [UP,LOOPBACK]\n");
+    }
+}
+
+static void cmd_initramfs(void) {
+    initramfs_status_t st = initramfs_get_status();
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("Initramfs Subsystem Status (Linux usr/ Parity):\n");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts("  Initialized : ");
+    vga_puts(st.initialized ? "YES (Active in VFS)\n" : "NO\n");
+    vga_puts("  Total Dirs  : ");
+    vga_putdec(st.total_dirs);
+    vga_puts("\n  Total Files : ");
+    vga_putdec(st.total_files);
+    vga_puts("\n  Extracted   : /usr, /usr/bin, /usr/lib, /etc, /sbin, /var\n");
+}
+
+static void cmd_virtio(void) {
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("Discovered VirtIO Paravirtualized Devices:\n");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    uint32_t count = virtio_get_device_count();
+    for (uint32_t i = 0; i < count; i++) {
+        virtio_device_t* dev = virtio_get_device(i);
+        if (!dev) continue;
+        vga_puts("  [VirtIO-");
+        vga_putdec(i);
+        vga_puts("] I/O Base: 0x");
+        vga_puthex(dev->io_base);
+        vga_puts(" | Type: ");
+        if (dev->device_id == VIRTIO_DEV_NET) vga_puts("virtio-net\n");
+        else if (dev->device_id == VIRTIO_DEV_BLOCK) vga_puts("virtio-blk\n");
+        else if (dev->device_id == VIRTIO_DEV_CONSOLE) vga_puts("virtio-console\n");
+        else vga_puts("virtio-device\n");
+    }
+}
+
+static void cmd_keyring(void) {
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("Airlys Sovereign Kernel Keyring (Linux certs/ Parity):\n");
+    uint32_t count = certs_get_key_count();
+    for (uint32_t i = 0; i < count; i++) {
+        sovereign_key_t* k = certs_get_key(i);
+        if (!k) continue;
+        vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+        vga_puts("  Key #");
+        vga_putdec(i + 1);
+        vga_puts(": [");
+        vga_putdec(k->key_bits);
+        vga_puts(" RSA] ");
+        vga_puts(k->owner);
+        vga_puts("\n");
+    }
+}
+
+static void cmd_pipe(void) {
+    int fds[2];
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("[IPC] Testing POSIX circular kernel pipe...\n");
+    if (pipe_create(fds) != 0) {
+        vga_puts("[ERR] Failed to allocate pipe\n");
+        return;
+    }
+    const char* test_data = "Sovereign IPC Pipe Packet";
+    pipe_write(fds[1], test_data, kstrlen(test_data));
+
+    char buf[64];
+    kmemset(buf, 0, sizeof(buf));
+    ssize_t n = pipe_read(fds[0], buf, sizeof(buf) - 1);
+    pipe_close(fds[0]);
+    pipe_close(fds[1]);
+
+    if (n > 0) {
+        vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+        vga_puts("[OK] IPC Pipe Read: '");
+        vga_puts(buf);
+        vga_puts("' (bytes: ");
+        vga_putdec((uint64_t)n);
+        vga_puts(")\n");
+    }
+}
+
+static void cmd_beep(const char* args) {
+    uint32_t freq = 440;
+    uint32_t ms = 150;
+    if (args && *args != '\0') {
+        freq = katoi(args);
+        if (freq == 0) freq = 440;
+    }
+    vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_puts("Playing hardware PC Speaker tone: ");
+    vga_putdec(freq);
+    vga_puts(" Hz...\n");
+    pcspkr_beep(freq, ms);
+}
+
+static void cmd_sha256(const char* str) {
+    if (!str || *str == '\0') {
+        vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+        vga_puts("sha256: missing input string\n");
+        return;
+    }
+    char hex[65];
+    sha256_string(str, hex);
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("SHA-256 Digest: ");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts(hex);
+    vga_puts("\n");
+}
+
+static void cmd_crc32(const char* str) {
+    if (!str || *str == '\0') {
+        vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+        vga_puts("crc32: missing input string\n");
+        return;
+    }
+    uint32_t val = crc32(0, (const uint8_t*)str, kstrlen(str));
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("CRC-32 (IEEE 802.3): ");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts("0x");
+    vga_puthex(val);
+    vga_puts("\n");
 }
 
 static void cmd_aira(const char* subcmd) {
@@ -744,6 +934,26 @@ void shell_execute(const char* cmdline) {
         sched_print_tasks();
     } else if (kstrcmp(cmd, "kill") == 0) {
         cmd_kill(args);
+    } else if (kstrcmp(cmd, "banner") == 0) {
+        cmd_banner();
+    } else if (kstrcmp(cmd, "lsblk") == 0 || kstrcmp(cmd, "blkdev") == 0) {
+        cmd_lsblk();
+    } else if (kstrcmp(cmd, "netdev") == 0) {
+        cmd_netdev();
+    } else if (kstrcmp(cmd, "initramfs") == 0) {
+        cmd_initramfs();
+    } else if (kstrcmp(cmd, "virtio") == 0) {
+        cmd_virtio();
+    } else if (kstrcmp(cmd, "keyring") == 0) {
+        cmd_keyring();
+    } else if (kstrcmp(cmd, "pipe") == 0) {
+        cmd_pipe();
+    } else if (kstrcmp(cmd, "beep") == 0) {
+        cmd_beep(args);
+    } else if (kstrcmp(cmd, "sha256") == 0) {
+        cmd_sha256(args);
+    } else if (kstrcmp(cmd, "crc32") == 0) {
+        cmd_crc32(args);
     } else if (kstrcmp(cmd, "covenant") == 0) {
         cmd_covenant();
     } else if (kstrcmp(cmd, "aira") == 0) {

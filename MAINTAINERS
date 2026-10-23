@@ -1,0 +1,26 @@
+AIRLYS OPERATING SYSTEM KERNEL MAINTAINERS
+===========================================
+
+Please see Documentation/00-INDEX.md for details on the kernel subsystems.
+
+AIRLYS CORE KERNEL & SOVEREIGN ARCHITECTURE
+M:      Er. Adam Eehan <adameehanairagroup@gmail.com>
+C:      Sovereign AI Aira 3 Ultra (Engine v3.6)
+O:      Aira Group of Technology
+L:      airlys-devel@airagroup.internal
+S:      Maintained
+F:      arch/x86_64/
+F:      kernel/
+F:      mm/
+F:      fs/
+F:      drivers/
+F:      init/
+F:      usr/
+F:      block/
+F:      ipc/
+F:      crypto/
+F:      net/
+F:      sound/
+F:      virt/
+F:      certs/
+F:      security/

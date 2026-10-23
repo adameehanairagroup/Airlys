@@ -1,0 +1,128 @@
+#
+# Airlys Kernel Configuration (Root Kconfig)
+# Lead Systems Architect: Er. Adam Eehan (Founder & CEO, Aira Group of Technology)
+# Co-Pilot: Sovereign AI Aira 3 Ultra (Engine v3.6)
+#
+
+mainmenu "Airlys Kernel Configuration"
+
+source "init/Kconfig"
+source "usr/Kconfig"
+
+menu "Processor type and features"
+
+config 64BIT
+	bool "64-bit kernel (x86_64 Long Mode)"
+	default y
+	help
+	  Compile the kernel for x86_64 64-bit Long Mode.
+
+config SMP
+	bool "Symmetric Multi-Processing support"
+	default y
+
+config PREEMPT
+	bool "Preemptive Multitasking Kernel (Low-Latency)"
+	default y
+
+endmenu
+
+menu "Memory Management options"
+
+config PHYSICAL_MEMORY_MANAGER
+	bool "Physical Page Frame Bitmap Allocator (PMM)"
+	default y
+
+config VIRTUAL_MEMORY_MANAGER
+	bool "Virtual Memory Manager & Page Fault Handler (VMM)"
+	default y
+
+config SOVEREIGN_KERNEL_HEAP
+	bool "Dynamic Kernel Heap (kmalloc / kfree)"
+	default y
+
+config SLAB_ALLOCATOR
+	bool "Slab Cache Allocator (kmem_cache)"
+	default y
+
+endmenu
+
+menu "File systems"
+
+config VFS
+	bool "Virtual File System abstraction layer"
+	default y
+
+config RAMFS
+	bool "In-Memory RamFS"
+	default y
+
+config PROCFS
+	bool "/proc filesystem support"
+	default y
+
+config DEVFS
+	bool "/dev device filesystem support"
+	default y
+
+endmenu
+
+menu "Device Drivers"
+
+config VGA_CONSOLE
+	bool "VGA Text Console Driver (0xB8000)"
+	default y
+
+config PS2_KEYBOARD
+	bool "PS/2 Keyboard Scan Code Set 1 Driver"
+	default y
+
+config SERIAL_16550
+	bool "16550A UART Serial Driver (COM1 115200 baud)"
+	default y
+
+config RTC_CMOS
+	bool "CMOS Real-Time Clock Hardware Driver"
+	default y
+
+config SOUND_PCSPKR
+	bool "PC Speaker Tone Synthesizer"
+	default y
+
+config VIRTIO_PCI
+	bool "VirtIO PCI Hypervisor Driver"
+	default y
+
+endmenu
+
+menu "Networking support"
+
+config NET
+	bool "Networking support"
+	default y
+
+config NET_SKBUFF
+	bool "Socket Buffer (sk_buff) manager"
+	default y
+
+config NET_LOOPBACK
+	bool "Loopback network device (lo)"
+	default y
+
+endmenu
+
+menu "Cryptographic API"
+
+config CRYPTO_SHA256
+	bool "SHA-256 FIPS 180-4 Digest Algorithm"
+	default y
+
+config CRYPTO_CRC32
+	bool "IEEE 802.3 CRC-32 Checksum Algorithm"
+	default y
+
+config SOVEREIGN_KEYRING
+	bool "Airlys Sovereign X.509 Keyring"
+	default y
+
+endmenu

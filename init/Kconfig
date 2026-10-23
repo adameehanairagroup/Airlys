@@ -1,0 +1,22 @@
+#
+# Airlys Kernel - init/Kconfig
+#
+
+menu "General setup"
+
+config AIRLYS_ENTERPRISE
+	bool "Enable Airlys Enterprise Subsystems"
+	default y
+	help
+	  Enables canonical Linux enterprise subsystems, memory caches,
+	  multitasking scheduler, and sovereign security layers.
+
+config BOGOMIPS_CALIBRATION
+	bool "Calibrate CPU delay loop on boot"
+	default y
+
+config KERNEL_PRINTK
+	bool "Enable kernel printk ring buffer"
+	default y
+
+endmenu

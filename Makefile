@@ -41,7 +41,28 @@ C_SRCS      := kernel/kmain.c \
                drivers/serial.c \
                security/sentinel.c \
                lib/string.c \
-               arch/x86_64/idt.c
+               arch/x86_64/idt.c \
+               usr/initramfs.c \
+               init/version.c \
+               init/calibrate.c \
+               block/blk-core.c \
+               block/partition.c \
+               block/elevator.c \
+               ipc/pipe.c \
+               ipc/sem.c \
+               ipc/msg.c \
+               crypto/sha256.c \
+               crypto/crc32.c \
+               crypto/api.c \
+               net/skbuff.c \
+               net/netdev.c \
+               net/arp.c \
+               sound/core.c \
+               sound/pcspkr.c \
+               virt/virtio.c \
+               certs/keyring.c \
+               samples/hello_kernel.c \
+               samples/sample_pipe.c
 
 ASM_SRCS    := arch/x86_64/boot.s \
                arch/x86_64/interrupts.s \

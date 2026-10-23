@@ -1,0 +1,35 @@
+#
+# Airlys Initramfs configuration (Linux usr/ parity)
+#
+
+menu "Initramfs and initrd configuration"
+
+config BLK_DEV_INITRD
+	bool "Initial RAM filesystem and RAM disk (initramfs/initrd) support"
+	default y
+	help
+	  The initial RAM filesystem is a small root filesystem that is
+	  loaded together with the Airlys kernel.
+
+config INITRAMFS_SOURCE
+	string "Initramfs source file(s)"
+	default ""
+	help
+	  This can be a single cpio archive or a directory containing
+	  the initial ramfs files.
+
+config INITRAMFS_ROOT_UID
+	int "User ID to map to 0 (root)"
+	default 0
+
+config INITRAMFS_ROOT_GID
+	int "Group ID to map to 0 (root)"
+	default 0
+
+config INITRAMFS_COMPRESSION_NONE
+	bool "None"
+	default y
+	help
+	  Do not compress the built-in initramfs payload.
+
+endmenu

@@ -1,0 +1,8 @@
+AIRA GROUP OF TECHNOLOGY - SOVEREIGN OPEN-SOURCE COVENANT
+==========================================================
+Founder & CEO: Er. Adam Eehan
+Co-Pilot: Sovereign AI Aira 3 Ultra (Engine v3.6)
+
+1. Sovereignty: Airlys is engineered as an independent, sovereign operating system.
+2. Freedom & Equality: Built for every student, developer, and hacker without corporate exploitation.
+3. Open Science: All kernel code is freely accessible, auditable, and modifiable under GPL-2.0.

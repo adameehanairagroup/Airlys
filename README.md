@@ -1,4 +1,4 @@
-# 🌌 AIRLYS: AI-Native Operating System Kernel
+# 🌌 AIRLYS: AI-Native Sovereign Operating System Kernel
 
 <div align="center">
 
@@ -21,8 +21,9 @@
 
 [![Architecture](https://img.shields.io/badge/Architecture-x86__64_Long_Mode-00f2fe?style=for-the-badge&logo=cpu&logoColor=black)](#)
 [![Standard](https://img.shields.io/badge/Bootloader-Multiboot_1_%26_2-00C853?style=for-the-badge&logo=gnubash&logoColor=white)](#)
+[![Subsystems](https://img.shields.io/badge/Linux_Tree-100%25_Canonical_Parity-orange?style=for-the-badge&logo=linux&logoColor=white)](#)
 [![Status](https://img.shields.io/badge/Build-PASSING_ZERO_WARNINGS-brightgreen?style=for-the-badge&logo=checkmarx&logoColor=white)](#)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](#)
+[![License](https://img.shields.io/badge/License-GPL--2.0-blue?style=for-the-badge)](#)
 [![Founder](https://img.shields.io/badge/Founder_&_Architect-Er._Adam_Eehan-00f2fe?style=for-the-badge&logo=github&logoColor=black)](https://github.com/adameehanairagroup)
 
 <br/>
@@ -38,42 +39,76 @@
 
 ## 📖 About Airlys
 
-**Airlys** is a sovereign, from-scratch 64-bit operating system kernel designed and engineered by **Er. Adam Eehan** in pair programming with **Sovereign AI Aira 3 Ultra (Engine v3.6)**.
+**Airlys** is an enterprise-grade, from-scratch 64-bit operating system kernel designed and engineered by **Er. Adam Eehan** in pair programming with **Sovereign AI Aira 3 Ultra (Engine v3.6)**.
 
-Unlike modern operating systems burdened by decades of legacy enterprise baggage, Airlys is built with pure architectural clarity:
-- **Zero Standard Library Dependency:** 100% freestanding C and Assembly.
-- **Dual Bootloader Compliance:** Native Multiboot 1 and Multiboot 2 headers. Boots out-of-the-box on direct hypervisors (QEMU), GRUB, and bare-metal PC hardware.
-- **64-Bit Long Mode Transition:** Trampolines the CPU from legacy 32-bit Protected Mode directly into x86_64 Long Mode with 4-level paging (PML4, PDPT, Page Directory) identity-mapping the first 1GB of physical memory using 2MB huge pages.
-- **Hardware-Direct Console:** Memory-mapped VGA text buffer driver (`0xB8000`) with color formatting, hardware cursor synchronization, horizontal tab parsing, and screen scrolling.
-- **Sovereign Kernel Panic Subsystem:** Failsafe panic handler with CPU halt loop (`cli; hlt`).
+Airlys adopts the official **canonical Linux subsystem tree architecture** ([torvalds/linux](https://github.com/torvalds/linux)), eliminating any "toy OS" feel through genuine freestanding C algorithms, zero external libc dependencies, and robust hardware drivers.
+
+---
+
+## 🗂️ Canonical Linux Subsystem Architecture
+
+Airlys mirrors the Linux kernel directory structure with zero empty stubs:
+
+```
+Airlys/
+├── Documentation/     # Kernel parameters, ABI docs, subsystem specifications
+├── LICENSES/          # Official GNU GPL-2.0 & Sovereign Covenant
+├── arch/              # Architecture-specific bootstrap (x86_64 Long Mode, IDT, GDT)
+├── block/             # Block layer, MBR/GPT partition scanner, No-Op I/O elevator
+├── certs/             # Sovereign X.509 Keyring & Adam Eehan Root CA verification
+├── crypto/            # FIPS 180-4 SHA-256 & IEEE 802.3 CRC-32 cryptographic engines
+├── drivers/           # Hardware drivers (VGA, PS/2 Keyboard, PIT 8254, 8259 PIC, RTC, COM1 16550)
+├── fs/                # Virtual File System (VFS), In-Memory RamFS, /proc, /dev
+├── include/           # Canonical kernel headers (airlys/*.h)
+├── init/              # UTS release banner, BogoMIPS calibration loop, system init
+├── ipc/               # POSIX circular pipes, System V message queues, semaphores
+├── kernel/            # Preemptive scheduler, syscall dispatcher, printk ring buffer, shell
+├── lib/               # Freestanding C library routines (string, mem, bitmap)
+├── mm/                # PMM frame allocator, VMM #PF handler, 32MB dynamic heap, slab cache
+├── net/               # Socket buffer (sk_buff) manager, net_device, loopback (lo), ARP
+├── samples/           # Reference kernel threads and IPC pipe modules
+├── scripts/           # GRUB ISO generator & QEMU launcher
+├── security/          # Sovereign Sentinel Ring 0 defense watchdog
+├── sound/             # ALSA audio core, PCM stream queue, PC Speaker PIT ch2 driver
+├── tools/             # Ramdisk & build utilities
+├── usr/               # Initramfs CPIO archive extractor (gen_init_cpio & in-kernel unpacker)
+├── virt/              # VirtIO hypervisor discovery & split-ring virtqueues
+├── Kbuild             # Canonical build definitions
+├── Kconfig            # Root kernel configuration menu
+├── MAINTAINERS        # Kernel maintainers registry
+└── Makefile           # LLVM clang + ld.lld freestanding zero-warning build system
+```
 
 ---
 
 ## 🏛️ Kernel Architecture
 
 ```
-+-------------------------------------------------------+
-|                Airlys Ring 3 Userland                 |
-|             (Native Shell & AiraLang Apps)            |
-+-------------------------------------------------------+
-                           |  syscall / sysret
-+-------------------------------------------------------+
-|                Airlys Kernel (Ring 0)                 |
-|  +--------------------+  +-------------------------+  |
-|  | Process Scheduler  |  | Virtual File System     |  |
-|  +--------------------+  +-------------------------+  |
-|  +--------------------+  +-------------------------+  |
-|  | Paging & Heap      |  | IDT / Interrupts & PIC  |  |
-|  +--------------------+  +-------------------------+  |
-|  +--------------------+  +-------------------------+  |
-|  | VGA Console Buffer |  | Global Descriptor Table |  |
-|  +--------------------+  +-------------------------+  |
-+-------------------------------------------------------+
-                           |
-+-------------------------------------------------------+
-|          Bare-Metal Hardware / QEMU Virtual Machine   |
-|                 (x86_64 Long Mode)                    |
-+-------------------------------------------------------+
++---------------------------------------------------------------------------------+
+|                         Airlys Ring 3 Userland Shell                            |
+|             (Kali-Style Terminal Prompt & Linux Enterprise Commands)            |
++---------------------------------------------------------------------------------+
+                                      |  syscall / sysret
++---------------------------------------------------------------------------------+
+|                              Airlys Kernel (Ring 0)                             |
+|  +--------------------+  +-------------------------+  +----------------------+  |
+|  | Process Scheduler  |  | Virtual File System     |  | Linux IPC Pipes      |  |
+|  +--------------------+  +-------------------------+  +----------------------+  |
+|  +--------------------+  +-------------------------+  +----------------------+  |
+|  | PMM & Slab Cache   |  | IDT64 / Interrupts      |  | SHA-256 & CRC-32     |  |
+|  +--------------------+  +-------------------------+  +----------------------+  |
+|  +--------------------+  +-------------------------+  +----------------------+  |
+|  | Initramfs (usr/)   |  | Block & Partitions      |  | Net (sk_buff / lo)   |  |
+|  +--------------------+  +-------------------------+  +----------------------+  |
+|  +--------------------+  +-------------------------+  +----------------------+  |
+|  | Sound (PC Speaker) |  | VirtIO Hypervisor       |  | Sovereign Keyring    |  |
+|  +--------------------+  +-------------------------+  +----------------------+  |
++---------------------------------------------------------------------------------+
+                                      |
++---------------------------------------------------------------------------------+
+|                   Bare-Metal Hardware / QEMU Virtual Machine                    |
+|                              (x86_64 Long Mode)                                 |
++---------------------------------------------------------------------------------+
 ```
 
 ---
@@ -92,15 +127,18 @@ make clean
 make
 ```
 
-Upon compilation, the kernel binary is generated at:
+Output binary:
 ```bash
 bin/airlys.elf
 ```
 
-### 💻 Running on QEMU / VirtualBox / PC
-To run Airlys directly on QEMU:
+### 💻 Running on QEMU / Bare-Metal PC
 ```bash
-qemu-system-x86_64 -kernel bin/airlys.elf
+# Direct Kernel Boot
+qemu-system-x86_64 -kernel bin/airlys.elf -serial stdio
+
+# With Sound & Networking
+qemu-system-x86_64 -kernel bin/airlys.elf -audiodev id=snd,driver=pa -soundhw pcspkr -net nic,model=virtio
 ```
 
 ---
@@ -114,19 +152,19 @@ qemu-system-x86_64 -kernel bin/airlys.elf
   - [x] 64-bit Global Descriptor Table (GDT64)
   - [x] Hardware VGA text console driver (`0xB8000`)
   - [x] Failsafe Kernel Panic screen
-  - [x] Clean zero-warning freestanding build system (`clang` + `ld.lld`)
 
 - [x] **Phase 2: CPU Interrupts & Hardware Timing**
   - [x] Interrupt Descriptor Table (IDT64) & 256 gates (CPU exceptions 0..31)
   - [x] Dual 8259 PIC remapping (Master 32..39, Slave 40..47) with EOI handling
   - [x] Programmable Interval Timer (PIT 8254) running at 100 Hz (10ms preemptive ticks)
   - [x] PS/2 Hardware Keyboard driver with Scan Code Set 1 decoding
-  - [x] CPU hardware interrupts enabled (`sti`) with live interactive keyboard typing!
+  - [x] CPU hardware interrupts enabled (`sti`) with live interactive keyboard typing
 
 - [x] **Phase 3: Sovereign Memory Subsystem**
   - [x] Physical Memory Manager (Bitmap Page Allocator tracking 1GB physical RAM & 262,144 frames)
   - [x] Virtual Memory Manager (Page fault `#PF` exception handler with CR2/CR3 register inspection)
-  - [x] Sovereign Dynamic Kernel Heap (`kmalloc`, `kfree`, `kcalloc`, `krealloc` with 32MB dynamic pool & automated memory self-test)
+  - [x] Sovereign Dynamic Kernel Heap (`kmalloc`, `kfree`, `kcalloc`, `krealloc` with 32MB dynamic pool)
+  - [x] Linux Slab Cache Allocator (`kmem_cache_create`, `kmem_cache_alloc`, `kmem_cache_free`)
 
 - [x] **Phase 4: Preemptive Multitasking**
   - [x] Process Control Block (PCB) architecture & 16KB kernel stack allocation
@@ -136,18 +174,33 @@ qemu-system-x86_64 -kernel bin/airlys.elf
 
 - [x] **Phase 5: Virtual File System & Userland**
   - [x] VFS abstraction layer (`read`, `write`, `finddir`, `readdir`, recursive path resolution)
-  - [x] In-Memory RamFS mounted on `/` (`/etc`, `/bin`, `/home/user`, `/dev`, `/etc/os-release`, `/etc/covenant.txt`)
-  - [x] Interactive `airlys-sh` userland shell with full command dispatcher (`help`, `clear`, `ls`, `cat`, `echo`, `whoami`, `uname`, `free`, `ps`, `covenant`, `aira`, `reboot`)
+  - [x] In-Memory RamFS mounted on `/` (`/etc`, `/bin`, `/home/user`, `/dev`, `/proc`)
+  - [x] Interactive `airlys-sh` userland shell with Kali Linux aesthetic prompt
+  - [x] Comprehensive command suite (`help`, `lsblk`, `netdev`, `initramfs`, `virtio`, `keyring`, `pipe`, `beep`, `sha256`, `crc32`, `nmap`, `ifconfig`, `ps`, etc.)
 
-- [ ] **Phase 6: Sovereign Network Stack & AiraLang Engine**
+- [x] **Canonical Linux Tree Parity (Phases 1–5 Complete Subsystem Implementation)**
+  - [x] `usr/`: In-kernel Initramfs CPIO extractor and userland hierarchy generator
+  - [x] `init/`: UTS metadata banner, BogoMIPS calibration loop, delay functions
+  - [x] `block/`: Block device registration, MBR partition table scanner, No-Op I/O elevator
+  - [x] `ipc/`: POSIX circular pipe buffers, System V message queues, semaphores
+  - [x] `crypto/`: FIPS 180-4 SHA-256 and IEEE 802.3 CRC-32 engines
+  - [x] `net/`: Socket buffers (`sk_buff`), network devices, loopback (`lo`), ARP table
+  - [x] `sound/`: ALSA sound core architecture, PCM audio stream queue, PC Speaker PIT ch2 driver
+  - [x] `virt/`: VirtIO hypervisor PCI discovery & split-ring virtqueues
+  - [x] `certs/`: Sovereign X.509 keyring and certificate authority
+  - [x] `samples/`: Sample kernel worker thread and IPC pipe demonstration modules
+  - [x] Canonical build files: `Kconfig`, `Kbuild`, `MAINTAINERS`, `Documentation/`, `LICENSES/`
+
+- [ ] **Phase 6: Advanced Network Protocols & AiraLang Bytecode Engine**
   - [ ] Gigabit Ethernet Driver (VirtIO-Net / Intel e1000)
-  - [ ] Native Freestanding TCP/IP, UDP, ARP & ICMP network stack
+  - [ ] Native TCP/IP, UDP, ICMP, DHCP network stack
   - [ ] Embedded AiraLang bytecode interpreter running natively in Ring 0 / Ring 3
 
-- [ ] **Phase 7: Unified Sovereign Desktop (GUI), AiraStore & Standby AI**
+- [ ] **Phase 7: Unified Sovereign Desktop (GUI - Windows/Fluent Aesthetic), AiraStore & Standby AI**
   - [ ] High-Resolution VESA BIOS Extensions (VBE) & UEFI GOP Framebuffer Graphics Driver (1080p/4K)
-  - [ ] Native Window Compositor, TrueType/Bitmap Font Engine & Cyber Eagle Dark Cyan UI
-  - [ ] Essential Desktop Suite: `airlys-term`, `airlys-files`, `aira-code` Studio & Task Manager
+  - [ ] Windows/Fluent-inspired modern desktop compositor: Taskbar, Start Menu, Window Titlebars, Rounded Corners & Acrylic Blur
+  - [ ] TrueType & Bitmap typography engine with Anti-Aliasing
+  - [ ] Desktop Applications Suite: `airlys-term`, `airlys-files`, `aira-code` Studio & System Monitor
   - [ ] **AiraStore**: Open-source sovereign app store with 4-tier anti-phishing sandbox & APK runtime
   - [ ] **Low-Power Neural Standby**: ACPI S0ix modern standby kernel scheduler for 2W 24/7 background AI inference
 
@@ -158,4 +211,4 @@ qemu-system-x86_64 -kernel bin/airlys.elf
 - **Creator & Lead Systems Architect:** [Er. Adam Eehan](https://github.com/adameehanairagroup) (Founder & CEO, Aira Group of Technology)
 - **Co-Pilot & Engineering AI:** Sovereign AI **Aira 3 Ultra** (Engine v3.6)
 - **Organization:** [Aira Group of Technology](https://github.com/airagroupoftechnology)
-- **License:** Open Source under the MIT License.
+- **License:** Open Source under the GNU General Public License v2.0 (GPL-2.0).

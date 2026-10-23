@@ -1,0 +1,14 @@
+Airlys Kernel Command-Line Parameters
+======================================
+
+console=tty0,115200
+    Directs kernel log output to both the VGA terminal and 16550 UART COM1 serial.
+
+initrd=<path>
+    Specifies the address or path of the external CPIO initramfs archive.
+
+quiet
+    Suppresses verbose kernel boot messages until userland shell startup.
+
+sovereign_mode=strict
+    Enforces kernel integrity checking and signature verification against Adam Eehan root key.
