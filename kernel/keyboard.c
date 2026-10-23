@@ -63,9 +63,7 @@ static void keyboard_callback(registers_t* regs) {
         if (c != 0) {
             if (c == '\n') {
                 vga_putchar('\n');
-                vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-                vga_puts("Airlys >>> ");
-                vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+                vga_print_prompt();
             } else {
                 vga_putchar(c);
             }

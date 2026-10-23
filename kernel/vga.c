@@ -54,7 +54,7 @@ void vga_clear(void) {
 
 void vga_putchar(char c) {
     if (c == '\b') {
-        if (vga_column > 0) {
+        if (vga_column > 12) {
             vga_column--;
             const size_t index = vga_row * VGA_WIDTH + vga_column;
             vga_buffer[index] = vga_entry(' ', vga_current_color);
@@ -137,4 +137,32 @@ void vga_putdec(uint64_t val) {
     while (--i >= 0) {
         vga_putchar(buf[i]);
     }
+}
+
+void vga_print_prompt(void) {
+    /* Line 1: ┌──(root@airlys-os)-[/home/user] */
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_putchar((char)0xDA); /* CP437 box top-left: ┌ */
+    vga_putchar((char)0xC4); /* CP437 horizontal: ─ */
+    vga_putchar((char)0xC4); /* CP437 horizontal: ─ */
+    vga_puts("(");
+
+    vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+    vga_puts("root");
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("@airlys-os)-[");
+
+    vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
+    vga_puts("/home/user");
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("]\n");
+
+    /* Line 2: └─Airlys >> */
+    vga_putchar((char)0xC0); /* CP437 box bottom-left: └ */
+    vga_putchar((char)0xC4); /* CP437 horizontal: ─ */
+    vga_puts("Airlys >> ");
+
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
 }

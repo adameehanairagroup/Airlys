@@ -43,5 +43,6 @@ void vga_write(const char* data, size_t size);
 void vga_puts(const char* str);
 void vga_puthex(uint64_t val);
 void vga_putdec(uint64_t val);
+void vga_print_prompt(void);
 
 #endif /* AIRLYS_VGA_H */
