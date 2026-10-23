@@ -13,6 +13,7 @@
 #define FONT_CHAR_HEIGHT 16
 
 /* Typography API */
+const uint8_t* font_get_glyph(char c);
 void font_draw_char(uint32_t x, uint32_t y, char c, uint32_t color);
 void font_draw_string(uint32_t x, uint32_t y, const char* str, uint32_t color);
 void font_draw_string_glow(uint32_t x, uint32_t y, const char* str, uint32_t color, uint32_t glow_color);

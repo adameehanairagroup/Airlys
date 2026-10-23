@@ -45,7 +45,36 @@ static void aira_sentinel_task(void) {
 }
 
 void kernel_main(uint64_t magic, uint64_t addr) {
-    /* Step 1: Initialize hardware VGA terminal console */
+    /* Step 0: Extract Hardware Framebuffer immediately (UEFI GOP / VBE Tag 16) */
+    if (magic == 0x36D76289 && addr != 0) {
+        uint32_t total_size = *(volatile uint32_t*)addr;
+        uint8_t* tag_ptr = (uint8_t*)(addr + 8);
+
+        while (tag_ptr < (uint8_t*)(addr + total_size)) {
+            uint32_t tag_type = *(volatile uint32_t*)tag_ptr;
+            uint32_t tag_size = *(volatile uint32_t*)(tag_ptr + 4);
+
+            if (tag_type == 0 || tag_size == 0) break;
+
+            if (tag_type == 16) { /* Tag 16: Framebuffer tag */
+                uint64_t fb_phys = *(volatile uint64_t*)(tag_ptr + 8);
+                uint32_t pitch   = *(volatile uint32_t*)(tag_ptr + 16);
+                uint32_t w       = *(volatile uint32_t*)(tag_ptr + 20);
+                uint32_t h       = *(volatile uint32_t*)(tag_ptr + 24);
+                uint8_t  bpp     = *(volatile uint8_t*)(tag_ptr + 28);
+
+                if (fb_phys != 0 && w >= 640 && h >= 480) {
+                    vbe_set_physical_framebuffer(fb_phys, w, h, pitch, (uint32_t)bpp);
+                    vbe_early_boot_splash();
+                    break;
+                }
+            }
+
+            tag_ptr += (tag_size + 7) & ~7;
+        }
+    }
+
+    /* Step 1: Initialize hardware VGA terminal console (mirrors to active GOP display) */
     vga_init();
 
     /* Banner & Sovereign Branding */
@@ -160,42 +189,9 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     initramfs_init();
     vga_puts(" [OK] Virtual File System (VFS)  : In-Memory RamFS, /proc, /dev & /usr mounted\n");
 
-    /* Step 14: Phase 7 - VESA Linear Framebuffer & Desktop Window Compositor */
-    /* Parse Multiboot 2 Hardware Framebuffer Info (UEFI GOP) */
-    if (magic == 0x36D76289 && addr != 0) {
-        uint32_t total_size = *(volatile uint32_t*)addr;
-        uint8_t* tag_ptr = (uint8_t*)(addr + 8);
-
-        while (tag_ptr < (uint8_t*)(addr + total_size)) {
-            uint32_t tag_type = *(volatile uint32_t*)tag_ptr;
-            uint32_t tag_size = *(volatile uint32_t*)(tag_ptr + 4);
-
-            if (tag_type == 0 || tag_size == 0) break;
-
-            if (tag_type == 16) { /* Tag 16: Framebuffer tag */
-                uint64_t fb_phys = *(volatile uint64_t*)(tag_ptr + 8);
-                uint32_t pitch   = *(volatile uint32_t*)(tag_ptr + 16);
-                uint32_t w       = *(volatile uint32_t*)(tag_ptr + 20);
-                uint32_t h       = *(volatile uint32_t*)(tag_ptr + 24);
-                uint8_t  bpp     = *(volatile uint8_t*)(tag_ptr + 28);
-
-                if (fb_phys != 0 && w >= 640 && h >= 480) {
-                    vbe_set_physical_framebuffer(fb_phys, w, h, pitch, (uint32_t)bpp);
-                    vga_puts(" [OK] Hardware GOP Framebuffer   : Physical LCD Display Active (");
-                    vga_putdec(w);
-                    vga_puts("x");
-                    vga_putdec(h);
-                    vga_puts(" @ 32bpp TrueColor)\n");
-                    break;
-                }
-            }
-
-            tag_ptr += (tag_size + 7) & ~7;
-        }
-    }
-
+    /* Step 14: Phase 7 - Desktop Window Compositor & Hardware Acceleration */
     compositor_init();
-    vga_puts(" [OK] Desktop Shell Compositor   : VBE 1024x768 @ 32bpp TrueColor & Acrylic Ready\n");
+    vga_puts(" [OK] Desktop Shell Compositor   : TrueColor Framebuffer & Acrylic Compositor Ready\n");
 
     /* Step 15: Phase 8 - ACPI S0ix Modern Standby, Local Neural Engine & AiraStore */
     acpi_init();
@@ -228,12 +224,15 @@ void kernel_main(uint64_t magic, uint64_t addr) {
 
     /* Continuous 60 FPS live rendering loop (live CPU wave graph & RTC clock) */
     uint64_t last_frame_ticks = 0;
+    uint32_t loop_counter = 0;
     for (;;) {
         uint64_t current_ticks = timer_get_ticks();
-        if (current_ticks > last_frame_ticks + 5) { /* Refresh every ~50ms */
+        loop_counter++;
+        if (current_ticks > last_frame_ticks + 5 || loop_counter >= 300000) {
             compositor_render_frame();
             last_frame_ticks = current_ticks;
+            loop_counter = 0;
         }
-        __asm__ volatile ("hlt");
+        __asm__ volatile ("pause");
     }
 }

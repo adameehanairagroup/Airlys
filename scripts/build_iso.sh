@@ -24,18 +24,24 @@ cat << 'EOF' > "${ISO_DIR}/boot/grub/grub.cfg"
 insmod all_video
 insmod efi_gop
 insmod efi_uga
+insmod video_bochs
+insmod video_cirrus
+insmod vbe
+insmod vga
 insmod font
 
-set gfxmode=auto
+set gfxmode=1920x1080x32,1024x768x32,auto
 set gfxpayload=keep
 
 set timeout=5
 set default=0
 
-menuentry "Airlys Sovereign OS (x86_64 Long Mode - UEFI GOP)" {
+menuentry "Airlys Sovereign OS (Universal Auto-Detect - Bare Metal & VM)" {
     insmod all_video
     insmod efi_gop
     insmod efi_uga
+    insmod vbe
+    insmod vga
     set gfxpayload=keep
     multiboot2 /boot/airlys.elf
     boot
@@ -43,8 +49,19 @@ menuentry "Airlys Sovereign OS (x86_64 Long Mode - UEFI GOP)" {
 
 menuentry "Airlys Sovereign OS (1024x768 TrueColor Framebuffer)" {
     insmod all_video
+    insmod vbe
+    insmod efi_gop
     set gfxmode=1024x768x32,auto
     set gfxpayload=1024x768x32,keep
+    multiboot2 /boot/airlys.elf
+    boot
+}
+
+menuentry "Airlys Sovereign OS (1920x1080 Native FHD Framebuffer)" {
+    insmod all_video
+    insmod efi_gop
+    set gfxmode=1920x1080x32,auto
+    set gfxpayload=1920x1080x32,keep
     multiboot2 /boot/airlys.elf
     boot
 }

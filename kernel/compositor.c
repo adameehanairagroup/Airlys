@@ -21,6 +21,7 @@ void compositor_init(void) {
 
     /* Initialize VBE 1024x768 @ 32bpp Framebuffer */
     vbe_init(1024, 768);
+    vbe_allocate_backbuffer();
     apps_init();
 
     /* Pre-seed core windows */

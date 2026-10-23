@@ -1,9 +1,33 @@
 #include <airlys/vga.h>
+#include <airlys/vbe.h>
 
 static size_t vga_row;
 static size_t vga_column;
 static uint8_t vga_current_color;
 static volatile uint16_t* const vga_buffer = (volatile uint16_t*)VGA_BUFFER_PHYSICAL;
+
+static uint32_t vga_to_rgb(uint8_t vga_color) {
+    uint8_t fg = vga_color & 0x0F;
+    switch (fg) {
+        case VGA_COLOR_BLACK:        return 0xFF000000;
+        case VGA_COLOR_BLUE:         return 0xFF0055AA;
+        case VGA_COLOR_GREEN:        return 0xFF00AA00;
+        case VGA_COLOR_CYAN:         return 0xFF00AAAA;
+        case VGA_COLOR_RED:          return 0xFFAA0000;
+        case VGA_COLOR_MAGENTA:      return 0xFFAA00AA;
+        case VGA_COLOR_BROWN:        return 0xFFAA5500;
+        case VGA_COLOR_LIGHT_GREY:   return 0xFFAAAAAA;
+        case VGA_COLOR_DARK_GREY:    return 0xFF555555;
+        case VGA_COLOR_LIGHT_BLUE:   return 0xFF5555FF;
+        case VGA_COLOR_LIGHT_GREEN:  return 0xFF55FF55;
+        case VGA_COLOR_LIGHT_CYAN:   return 0xFF00E5FF;
+        case VGA_COLOR_LIGHT_RED:    return 0xFFFF5555;
+        case VGA_COLOR_LIGHT_MAGENTA:return 0xFFFF55FF;
+        case VGA_COLOR_LIGHT_BROWN:  return 0xFFFFFF55;
+        case VGA_COLOR_WHITE:        return 0xFFFFFFFF;
+        default:                     return 0xFFFFFFFF;
+    }
+}
 
 /* Outport byte to I/O port (used for hardware cursor updates) */
 static inline void outb(uint16_t port, uint8_t val) {
@@ -11,6 +35,7 @@ static inline void outb(uint16_t port, uint8_t val) {
 }
 
 static void vga_update_cursor(void) {
+    if (vbe_is_hardware_framebuffer()) return;
     uint16_t pos = (uint16_t)(vga_row * VGA_WIDTH + vga_column);
     outb(0x3D4, 0x0F);
     outb(0x3D5, (uint8_t)(pos & 0xFF));
@@ -53,6 +78,10 @@ void vga_clear(void) {
 }
 
 void vga_putchar(char c) {
+    if (vbe_is_hardware_framebuffer()) {
+        vbe_console_putchar(c, vga_to_rgb(vga_current_color));
+    }
+
     if (c == '\b') {
         if (vga_column > 12) {
             vga_column--;

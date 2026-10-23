@@ -20,8 +20,9 @@ void rtc_init(void) {
 rtc_time_t rtc_get_time(void) {
     rtc_time_t t;
 
-    /* Wait if RTC update in progress */
-    while (cmos_read(0x0A) & 0x80) {}
+    /* Wait if RTC update in progress (guarded by safety timeout) */
+    uint32_t timeout = 50000;
+    while ((cmos_read(0x0A) & 0x80) && --timeout > 0) {}
 
     t.second = cmos_read(0x00);
     t.minute = cmos_read(0x02);

@@ -1,10 +1,13 @@
 #include <airlys/vbe.h>
+#include <airlys/font.h>
 #include <airlys/heap.h>
 #include <airlys/string.h>
 #include <airlys/printk.h>
 
 static vbe_screen_t s_screen;
 static bool s_is_hardware = false;
+static uint32_t s_console_x = 24;
+static uint32_t s_console_y = 60;
 
 /* Static fallback buffer (1024 x 768 @ 32bpp) */
 #define VBE_MAX_PIXELS (1024 * 768)
@@ -15,8 +18,8 @@ bool vbe_is_hardware_framebuffer(void) {
 }
 
 void vbe_set_physical_framebuffer(uint64_t addr, uint32_t width, uint32_t height, uint32_t pitch, uint32_t bpp) {
-    if (width > 1920) width = 1920;
-    if (height > 1080) height = 1080;
+    if (width > 2560) width = 2560;
+    if (height > 1440) height = 1440;
     if (width == 0) width = 1024;
     if (height == 0) height = 768;
 
@@ -27,16 +30,138 @@ void vbe_set_physical_framebuffer(uint64_t addr, uint32_t width, uint32_t height
 
     /* Point front_buffer directly to physical GPU MMIO memory */
     s_screen.front_buffer = (uint32_t*)addr;
-    s_screen.back_buffer = (uint32_t*)kmalloc(width * height * sizeof(uint32_t));
-    if (!s_screen.back_buffer) {
-        s_screen.back_buffer = s_pixel_buffer;
-    }
+    s_screen.back_buffer = s_pixel_buffer;
 
     s_screen.initialized = true;
     s_is_hardware = true;
+}
 
-    printk(KERN_INFO "vbe: Physical UEFI GOP Framebuffer mapped at 0x%lx (%ux%u, pitch: %u)\n",
-           addr, width, height, s_screen.pitch);
+void vbe_allocate_backbuffer(void) {
+    if (!s_screen.initialized) return;
+    uint32_t total_pixels = s_screen.width * s_screen.height;
+    uint32_t* new_buf = (uint32_t*)kmalloc(total_pixels * sizeof(uint32_t));
+    if (new_buf) {
+        s_screen.back_buffer = new_buf;
+    }
+}
+
+void vbe_early_boot_splash(void) {
+    if (!s_screen.initialized || !s_screen.front_buffer) return;
+
+    /* Fill screen with deep obsidian */
+    for (uint32_t y = 0; y < s_screen.height; y++) {
+        uint8_t* row = ((uint8_t*)s_screen.front_buffer) + (y * s_screen.pitch);
+        uint32_t* pixels = (uint32_t*)row;
+        for (uint32_t x = 0; x < s_screen.width; x++) {
+            pixels[x] = COLOR_OBSIDIAN;
+        }
+    }
+
+    /* Draw top status banner */
+    const char* banner = " [ AIRLYS SOVEREIGN OS 64-BIT ] - UEFI GOP Linear Framebuffer Active ";
+    const char* sub    = " Founder & CEO: Er. Adam Eehan | Co-Pilot: Sovereign AI Aira 3 Ultra (Engine v3.6) ";
+
+    uint32_t x0 = 24;
+    for (uint32_t i = 0; banner[i] != '\0'; i++) {
+        const uint8_t* glyph = font_get_glyph(banner[i]);
+        for (uint32_t row = 0; row < 16; row++) {
+            uint8_t line = glyph[row];
+            uint8_t* dst_row = ((uint8_t*)s_screen.front_buffer) + ((16 + row) * s_screen.pitch);
+            uint32_t* p = (uint32_t*)dst_row;
+            for (uint32_t col = 0; col < 8; col++) {
+                if ((line >> (7 - col)) & 1) {
+                    p[x0 + col] = COLOR_CYAN_GLOW;
+                }
+            }
+        }
+        x0 += 8;
+    }
+
+    x0 = 24;
+    for (uint32_t i = 0; sub[i] != '\0'; i++) {
+        const uint8_t* glyph = font_get_glyph(sub[i]);
+        for (uint32_t row = 0; row < 16; row++) {
+            uint8_t line = glyph[row];
+            uint8_t* dst_row = ((uint8_t*)s_screen.front_buffer) + ((34 + row) * s_screen.pitch);
+            uint32_t* p = (uint32_t*)dst_row;
+            for (uint32_t col = 0; col < 8; col++) {
+                if ((line >> (7 - col)) & 1) {
+                    p[x0 + col] = COLOR_GREEN_OK;
+                }
+            }
+        }
+        x0 += 8;
+    }
+}
+
+void vbe_console_clear(void) {
+    if (!s_screen.initialized || !s_screen.front_buffer) return;
+    for (uint32_t y = 56; y < s_screen.height; y++) {
+        uint8_t* row = ((uint8_t*)s_screen.front_buffer) + (y * s_screen.pitch);
+        uint32_t* pixels = (uint32_t*)row;
+        for (uint32_t x = 0; x < s_screen.width; x++) {
+            pixels[x] = COLOR_OBSIDIAN;
+        }
+    }
+    s_console_x = 24;
+    s_console_y = 60;
+}
+
+void vbe_console_putchar(char c, uint32_t color) {
+    if (!s_screen.initialized || !s_screen.front_buffer) return;
+
+    if (c == '\r') {
+        s_console_x = 24;
+        return;
+    }
+
+    if (c == '\n') {
+        s_console_x = 24;
+        s_console_y += 18;
+        if (s_console_y + 18 >= s_screen.height) {
+            vbe_console_clear();
+        }
+        return;
+    }
+
+    if (c == '\t') {
+        s_console_x = (s_console_x + 32) & ~31;
+        if (s_console_x + 8 >= s_screen.width - 24) {
+            s_console_x = 24;
+            s_console_y += 18;
+            if (s_console_y + 18 >= s_screen.height) {
+                vbe_console_clear();
+            }
+        }
+        return;
+    }
+
+    if (c < 32 || c > 126) return;
+
+    const uint8_t* glyph = font_get_glyph(c);
+    for (uint32_t row = 0; row < 16; row++) {
+        uint8_t line = glyph[row];
+        uint32_t py = s_console_y + row;
+        if (py >= s_screen.height) break;
+        uint8_t* dst_row = ((uint8_t*)s_screen.front_buffer) + (py * s_screen.pitch);
+        uint32_t* pixels = (uint32_t*)dst_row;
+        for (uint32_t col = 0; col < 8; col++) {
+            uint32_t px = s_console_x + col;
+            if (px >= s_screen.width) break;
+            if ((line >> (7 - col)) & 1) {
+                pixels[px] = color;
+            }
+        }
+    }
+
+    s_console_x += 8;
+    if (s_console_x + 8 >= s_screen.width - 24) {
+        s_console_x = 24;
+        s_console_y += 18;
+        if (s_console_y + 18 >= s_screen.height) {
+            vbe_console_clear();
+        }
+    }
 }
 
 void vbe_init(uint32_t width, uint32_t height) {

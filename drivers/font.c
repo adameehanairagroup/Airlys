@@ -100,6 +100,11 @@ static const uint8_t s_font8x16[95][16] = {
     {0x00,0x76,0xDC,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}  /* '~' */
 };
 
+const uint8_t* font_get_glyph(char c) {
+    if (c < 32 || c > 126) c = '?';
+    return s_font8x16[(uint8_t)c - 32];
+}
+
 void font_draw_char(uint32_t x, uint32_t y, char c, uint32_t color) {
     if (c < 32 || c > 126) c = '?';
     const uint8_t* glyph = s_font8x16[(uint8_t)c - 32];

@@ -26,13 +26,13 @@ multiboot2_header:
     .long MB2_LENGTH
     .long MB2_CHECKSUM
 
-    /* Framebuffer Request Tag (Type 5) - Requests UEFI GOP / VBE 1024x768 @ 32bpp */
+    /* Framebuffer Request Tag (Type 5) - Requests UEFI GOP / VBE native @ 32bpp */
     .align 8
     .short 5              /* type = 5 (Framebuffer) */
-    .short 1              /* flags = 1 (Optional, safe on all firmware) */
+    .short 0              /* flags = 0 (Required graphics mode) */
     .long 20              /* size = 20 bytes */
-    .long 1024            /* width = 1024 */
-    .long 768             /* height = 768 */
+    .long 0               /* width = 0 (no preference / native panel) */
+    .long 0               /* height = 0 (no preference / native panel) */
     .long 32              /* depth = 32bpp */
 
     /* End tag */
@@ -121,6 +121,21 @@ map_pd_loop:
     incl %ecx
     cmpl $4096, %ecx
     jne map_pd_loop
+
+    /* Identity map entries 8..511 of PDPT using 1GB huge pages (8GB .. 512GB) */
+    movl $8, %ecx
+map_1gb_loop:
+    movl %ecx, %eax
+    shll $30, %eax
+    orl $0x83, %eax         /* Present + Writable + Huge 1GB Page (bit 7) */
+    movl %ecx, %edx
+    shrl $2, %edx
+    movl $pdpt_table, %ebx
+    movl %eax, (%ebx, %ecx, 8)
+    movl %edx, 4(%ebx, %ecx, 8)
+    incl %ecx
+    cmpl $512, %ecx
+    jne map_1gb_loop
 
     /* Load CR3 with physical address of PML4 */
     movl $pml4_table, %eax
