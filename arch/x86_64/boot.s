@@ -89,29 +89,37 @@ _start:
     testl $(1 << 29), %edx
     jz no_long_mode
 
-    /* Build identity page tables for the first 1GB using 2MB huge pages */
+    /* Build identity page tables for the first 8GB using 2MB huge pages */
     /* PML4[0] -> PDPT */
     movl $pml4_table, %eax
     movl $pdpt_table, %ebx
     orl $0x03, %ebx         /* Present + Writable */
     movl %ebx, (%eax)
 
-    /* PDPT[0] -> Page Directory */
+    /* PDPT[0..7] -> 8 Page Directories (8 * 1GB = 8GB) */
     movl $pdpt_table, %eax
     movl $page_dir_table, %ebx
     orl $0x03, %ebx
-    movl %ebx, (%eax)
+    movl $0, %ecx
+init_pdpt_loop:
+    movl %ebx, (%eax, %ecx, 8)
+    movl $0, 4(%eax, %ecx, 8)
+    addl $4096, %ebx
+    incl %ecx
+    cmpl $8, %ecx
+    jne init_pdpt_loop
 
-    /* Identity map 512 entries of 2MB = 1GB */
+    /* Identity map 4096 entries of 2MB = 8GB (0x00000000 .. 0x1FFFFFFFF) */
     movl $0, %ecx
 map_pd_loop:
     movl $0x200000, %eax    /* 2MB */
-    mull %ecx
+    mull %ecx               /* edx:eax = ecx * 2MB */
     orl $0x83, %eax         /* Present + Writable + Huge Page (bit 7) */
-    movl $page_dir_table, %edx
-    movl %eax, (%edx, %ecx, 8)
+    movl $page_dir_table, %ebx
+    movl %eax, (%ebx, %ecx, 8)
+    movl %edx, 4(%ebx, %ecx, 8)
     incl %ecx
-    cmpl $512, %ecx
+    cmpl $4096, %ecx
     jne map_pd_loop
 
     /* Load CR3 with physical address of PML4 */
@@ -192,7 +200,7 @@ pml4_table:
 pdpt_table:
     .skip 4096
 page_dir_table:
-    .skip 4096
+    .skip 32768
 
 /* Kernel Stack (16KB) */
 .align 16

@@ -4,12 +4,46 @@
 #include <airlys/printk.h>
 
 static vbe_screen_t s_screen;
+static bool s_is_hardware = false;
 
 /* Static fallback buffer (1024 x 768 @ 32bpp) */
 #define VBE_MAX_PIXELS (1024 * 768)
 static uint32_t s_pixel_buffer[VBE_MAX_PIXELS];
 
+bool vbe_is_hardware_framebuffer(void) {
+    return s_is_hardware;
+}
+
+void vbe_set_physical_framebuffer(uint64_t addr, uint32_t width, uint32_t height, uint32_t pitch, uint32_t bpp) {
+    if (width > 1920) width = 1920;
+    if (height > 1080) height = 1080;
+    if (width == 0) width = 1024;
+    if (height == 0) height = 768;
+
+    s_screen.width = width;
+    s_screen.height = height;
+    s_screen.pitch = (pitch > 0) ? pitch : width * 4;
+    s_screen.bpp = (bpp > 0) ? bpp : 32;
+
+    /* Point front_buffer directly to physical GPU MMIO memory */
+    s_screen.front_buffer = (uint32_t*)addr;
+    s_screen.back_buffer = (uint32_t*)kmalloc(width * height * sizeof(uint32_t));
+    if (!s_screen.back_buffer) {
+        s_screen.back_buffer = s_pixel_buffer;
+    }
+
+    s_screen.initialized = true;
+    s_is_hardware = true;
+
+    printk(KERN_INFO "vbe: Physical UEFI GOP Framebuffer mapped at 0x%lx (%ux%u, pitch: %u)\n",
+           addr, width, height, s_screen.pitch);
+}
+
 void vbe_init(uint32_t width, uint32_t height) {
+    if (s_is_hardware && s_screen.initialized) {
+        return; /* Keep real hardware framebuffer intact */
+    }
+
     if (width > 1024) width = 1024;
     if (height > 768) height = 768;
 
@@ -164,6 +198,17 @@ void vbe_swap_buffers(void) {
     if (!s_screen.initialized || s_screen.front_buffer == s_screen.back_buffer) {
         return;
     }
-    uint32_t total = s_screen.width * s_screen.height;
-    kmemcpy(s_screen.front_buffer, s_screen.back_buffer, total * sizeof(uint32_t));
+    if (s_screen.pitch == s_screen.width * 4) {
+        uint32_t total = s_screen.width * s_screen.height;
+        kmemcpy(s_screen.front_buffer, s_screen.back_buffer, total * sizeof(uint32_t));
+    } else {
+        uint8_t* dst = (uint8_t*)s_screen.front_buffer;
+        uint8_t* src = (uint8_t*)s_screen.back_buffer;
+        uint32_t row_bytes = s_screen.width * 4;
+        for (uint32_t y = 0; y < s_screen.height; y++) {
+            kmemcpy(dst, src, row_bytes);
+            dst += s_screen.pitch;
+            src += row_bytes;
+        }
+    }
 }
