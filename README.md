@@ -3,7 +3,7 @@
 <div align="center">
 
 <p align="center">
-  <img src="assets/airlys-eagle.svg" width="300" height="300" alt="Airlys Sovereign Cyber Eagle Emblem" />
+  <img src="assets/airlys-logo.png" width="700" alt="Airlys Sovereign Eagle Crest - The Sovereign Kernel" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0, 242, 254, 0.2);" />
 </p>
 
 ```
