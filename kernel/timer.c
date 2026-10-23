@@ -2,6 +2,7 @@
 #include <airlys/idt.h>
 #include <airlys/io.h>
 #include <airlys/pic.h>
+#include <airlys/sched.h>
 
 #define PIT_CHANNEL0 0x40
 #define PIT_COMMAND  0x43
@@ -12,6 +13,7 @@ static volatile uint64_t timer_ticks = 0;
 static void timer_callback(registers_t* regs) {
     (void)regs;
     timer_ticks++;
+    sched_timer_tick();
 }
 
 void timer_init(uint32_t frequency_hz) {

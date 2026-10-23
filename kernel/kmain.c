@@ -7,6 +7,15 @@
 #include <airlys/pmm.h>
 #include <airlys/vmm.h>
 #include <airlys/heap.h>
+#include <airlys/sched.h>
+#include <airlys/syscall.h>
+
+static void aira_sentinel_task(void) {
+    /* Background Sovereign Sentinel Health Daemon */
+    for (;;) {
+        task_sleep(500); /* Sleep 5 seconds (500 * 10ms ticks) */
+    }
+}
 
 void kernel_main(uint64_t magic, uint64_t addr) {
     /* Step 1: Initialize hardware VGA terminal console */
@@ -77,7 +86,27 @@ void kernel_main(uint64_t magic, uint64_t addr) {
         kfree(test_alloc);
     }
 
-    /* Step 9: Enable CPU Hardware Interrupts */
+    /* Step 9: Phase 4 - Preemptive Multitasking Scheduler */
+    sched_init();
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts(" [OK] Preemptive Scheduler       : Round-Robin (10ms Quantum) active\n");
+
+    /* Step 10: Phase 4 - System Calls & Dispatcher */
+    syscall_init();
+    vga_puts(" [OK] Sovereign Syscall Gateway  : Ring 0/Ring 3 Dispatcher ready\n");
+
+    /* Create background sentinel worker thread */
+    task_t* worker = task_create("aira_sentinel", aira_sentinel_task);
+    if (worker) {
+        vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+        vga_puts(" [OK] Background Thread Spawned  : PID ");
+        vga_putdec(worker->pid);
+        vga_puts(" [");
+        vga_puts(worker->name);
+        vga_puts("] running\n");
+    }
+
+    /* Step 11: Enable CPU Hardware Interrupts */
     __asm__ volatile ("sti");
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
     vga_puts(" [OK] Hardware Interrupts Active : STI executed (IF=1)\n");

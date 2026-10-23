@@ -28,10 +28,13 @@ C_SRCS      := kernel/kmain.c \
                kernel/pmm.c \
                kernel/vmm.c \
                kernel/heap.c \
+               kernel/sched.c \
+               kernel/syscall.c \
                arch/x86_64/idt.c
 
 ASM_SRCS    := arch/x86_64/boot.s \
-               arch/x86_64/interrupts.s
+               arch/x86_64/interrupts.s \
+               arch/x86_64/switch.s
 
 # Objects
 OBJS        := $(patsubst %.c, $(BUILD_DIR)/%.o, $(C_SRCS)) \

@@ -128,10 +128,11 @@ qemu-system-x86_64 -kernel bin/airlys.elf
   - [x] Virtual Memory Manager (Page fault `#PF` exception handler with CR2/CR3 register inspection)
   - [x] Sovereign Dynamic Kernel Heap (`kmalloc`, `kfree`, `kcalloc`, `krealloc` with 32MB dynamic pool & automated memory self-test)
 
-- [ ] **Phase 4: Preemptive Multitasking**
-  - [ ] Process Control Block (PCB) architecture
-  - [ ] Timer-driven Round-Robin process scheduler
-  - [ ] Ring 3 User-Mode execution transition
+- [x] **Phase 4: Preemptive Multitasking**
+  - [x] Process Control Block (PCB) architecture & 16KB kernel stack allocation
+  - [x] Timer-driven Round-Robin preemptive process scheduler (10ms time-slice)
+  - [x] Callee-saved context switch (`task_switch` in pure x86_64 assembly)
+  - [x] Sovereign System Call Gateway dispatcher (Ring 0 / Ring 3)
 
 - [ ] **Phase 5: Virtual File System & Userland**
   - [ ] VFS abstraction layer
