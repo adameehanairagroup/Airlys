@@ -2,6 +2,10 @@
 
 <div align="center">
 
+<p align="center">
+  <img src="assets/airlys-eagle.svg" width="300" height="300" alt="Airlys Sovereign Cyber Eagle Emblem" />
+</p>
+
 ```
      _    ___ ____  _  __   ______  
     / \  |_ _|  _ \| | \ \ / / ___| 
