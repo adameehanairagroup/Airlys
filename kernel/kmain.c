@@ -33,6 +33,9 @@
 #include <airlys/vbe.h>
 #include <airlys/compositor.h>
 #include <airlys/apps.h>
+#include <airlys/acpi.h>
+#include <airlys/neural.h>
+#include <airlys/airastore.h>
 
 static void aira_sentinel_task(void) {
     /* Background Sovereign Sentinel Health Daemon */
@@ -161,7 +164,17 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     compositor_init();
     vga_puts(" [OK] Desktop Shell Compositor   : VBE 1024x768 @ 32bpp TrueColor & Acrylic Ready\n");
 
-    /* Step 15: Phase 5 - Interactive Userland Shell (airlys-sh) */
+    /* Step 15: Phase 8 - ACPI S0ix Modern Standby, Local Neural Engine & AiraStore */
+    acpi_init();
+    neural_init();
+    airastore_init();
+    task_t* ai_worker = task_create("aira_standby_ai", neural_standby_daemon);
+    if (ai_worker) {
+        vga_puts(" [OK] S0ix Standby AI Runtime    : ACPI 2W Modern Standby & Local Neural Daemon online\n");
+    }
+    vga_puts(" [OK] AiraStore Sandbox Engine   : 4-Tier anti-phishing package manager ready\n");
+
+    /* Step 16: Phase 5 - Interactive Userland Shell (airlys-sh) */
     shell_init();
     vga_puts(" [OK] Sovereign Userland Shell   : airlys-sh active & command dispatcher ready\n");
 

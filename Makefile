@@ -28,6 +28,8 @@ C_SRCS      := kernel/kmain.c \
                kernel/airalang.c \
                kernel/compositor.c \
                kernel/apps.c \
+               kernel/neural.c \
+               kernel/airastore.c \
                mm/pmm.c \
                mm/vmm.c \
                mm/heap.c \
@@ -45,6 +47,7 @@ C_SRCS      := kernel/kmain.c \
                drivers/pci.c \
                drivers/vbe.c \
                drivers/font.c \
+               drivers/acpi.c \
                security/sentinel.c \
                lib/string.c \
                arch/x86_64/idt.c \

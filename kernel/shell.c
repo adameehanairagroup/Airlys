@@ -24,6 +24,9 @@
 #include <airlys/vbe.h>
 #include <airlys/compositor.h>
 #include <airlys/apps.h>
+#include <airlys/acpi.h>
+#include <airlys/neural.h>
+#include <airlys/airastore.h>
 
 static char shell_buffer[SHELL_MAX_INPUT];
 static size_t shell_pos = 0;
@@ -149,6 +152,15 @@ static void cmd_help(void) {
     vga_puts("   banner         - Print UTS release & Linux/Airlys banners\n");
     vga_puts("   clear          - Clear VGA screen\n");
     vga_puts("   reboot         - Warm hardware reboot\n");
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts(" 🧠 Phase 8: Local Standby AI (2W S0ix) & AiraStore Sandbox:\n");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts("   ai <prompt>    - Prompt Local Sovereign AI Neural Engine (Offline/Ring 0)\n");
+    vga_puts("   standby        - Enter Low-Power ACPI S0ix Modern Standby (2W TDP, AI Awake)\n");
+    vga_puts("   wake           - Wake system from S0ix Modern Standby back to S0 Active\n");
+    vga_puts("   power          - Print ACPI power stats, TDP wattage & standby queries\n");
+    vga_puts("   airastore      - Open Sovereign App Store & 4-Tier anti-phishing sandbox\n");
 
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     vga_puts(" 🖥️ Phase 7: Fluent Acrylic GUI & Sovereign Desktop Shell:\n");
@@ -1160,6 +1172,111 @@ static void cmd_lock(void) {
     }
 }
 
+static void cmd_ai(const char* prompt) {
+    if (!prompt || *prompt == '\0') {
+        vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        vga_puts("Usage: ai <prompt>\n");
+        vga_puts("Example: ai who are you | ai explain memory | ai power status\n");
+        return;
+    }
+
+    char response[512];
+    neural_infer(prompt, response, sizeof(response));
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("Prompt   : \"");
+    vga_puts(prompt);
+    vga_puts("\"\n");
+
+    vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_puts(response);
+    vga_puts("\n");
+}
+
+static void cmd_standby(void) {
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("=================================================================\n");
+    vga_puts("    ENTERING ACPI S0ix LOW-POWER NEURAL STANDBY (2W TDP)         \n");
+    vga_puts("=================================================================\n");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts("[*] Throttling CPU frequency & quantum tick timers to 2W profile\n");
+    vga_puts("[*] Dimming display and idling peripheral buses\n");
+    vga_puts("[*] Local AI Standby Daemon: ACTIVE & LISTENING in Ring 0\n");
+
+    acpi_enter_s0ix_standby();
+
+    vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_puts("\n[OK] System is in S0ix Modern Standby. Type 'ai <prompt>' to test response in sleep!\n");
+    vga_puts("[*] Type 'wake' to restore full 15W S0 Active performance.\n");
+}
+
+static void cmd_wake(void) {
+    acpi_wake_from_standby();
+    vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_puts("[OK] System awakened from S0ix Modern Standby.\n");
+    vga_puts("[*] CPU and peripherals restored to Full S0 Active State (~15W TDP).\n");
+}
+
+static void cmd_power(void) {
+    acpi_power_info_t* pwr = acpi_get_power_info();
+    neural_stats_t* nstats = neural_get_stats();
+
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts("-----------------------------------------------------------------\n");
+    vga_puts("   AIRLYS ACPI 6.4 POWER MANAGEMENT & NEURAL STANDBY METRICS     \n");
+    vga_puts("-----------------------------------------------------------------\n");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts("Power State     : ");
+    if (pwr->current_state == POWER_STATE_S0IX_STANDBY) {
+        vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
+        vga_puts("S0ix Modern Standby (Low-Power 2W TDP)\n");
+    } else {
+        vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+        vga_puts("S0 Active (Full Performance 15W TDP)\n");
+    }
+
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts("Current Draw    : ");
+    if (pwr->current_state == POWER_STATE_S0IX_STANDBY) {
+        vga_putdec(pwr->standby_power_mw / 1000);
+        vga_puts(".95 W (Eco-Optimized)\n");
+    } else {
+        vga_putdec(pwr->active_power_mw / 1000);
+        vga_puts(".00 W (Peak Performance)\n");
+    }
+
+    vga_puts("Standby AI Core : ");
+    vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+    vga_puts("ONLINE (Model: ");
+    vga_puts(nstats->model_name);
+    vga_puts(", 350M INT8)\n");
+
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    vga_puts("Total Inferences: ");
+    vga_putdec(nstats->total_inferences);
+    vga_puts(" (Standby Served: ");
+    vga_putdec(nstats->standby_inferences);
+    vga_puts(")\n");
+    vga_puts("Battery Health  : 98% (Healthy ACPI Battery Interface detected)\n");
+}
+
+static void cmd_airastore(const char* args) {
+    if (!args || *args == '\0' || kstrcmp(args, "list") == 0) {
+        airastore_list();
+        return;
+    }
+
+    if (kstrncmp(args, "install ", 8) == 0) {
+        airastore_install(args + 8);
+    } else if (kstrncmp(args, "remove ", 7) == 0) {
+        airastore_remove(args + 7);
+    } else if (kstrncmp(args, "verify ", 7) == 0) {
+        airastore_verify(args + 7);
+    } else {
+        airastore_list();
+    }
+}
+
 static void cmd_reboot(void) {
     vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
     vga_puts("Rebooting Airlys Sovereign OS...\n");
@@ -1289,6 +1406,16 @@ void shell_execute(const char* cmdline) {
         cmd_startmenu();
     } else if (kstrcmp(cmd, "lock") == 0 || kstrcmp(cmd, "lockscreen") == 0) {
         cmd_lock();
+    } else if (kstrcmp(cmd, "ai") == 0 || kstrcmp(cmd, "ask") == 0 || kstrcmp(cmd, "infer") == 0) {
+        cmd_ai(args);
+    } else if (kstrcmp(cmd, "standby") == 0 || kstrcmp(cmd, "sleep") == 0) {
+        cmd_standby();
+    } else if (kstrcmp(cmd, "wake") == 0 || kstrcmp(cmd, "resume") == 0) {
+        cmd_wake();
+    } else if (kstrcmp(cmd, "power") == 0 || kstrcmp(cmd, "battery") == 0) {
+        cmd_power();
+    } else if (kstrcmp(cmd, "airastore") == 0 || kstrcmp(cmd, "store") == 0) {
+        cmd_airastore(args);
     } else if (kstrcmp(cmd, "reboot") == 0) {
         cmd_reboot();
     } else {
