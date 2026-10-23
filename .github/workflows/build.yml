@@ -14,10 +14,10 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v4
 
-      - name: Install LLVM & Clang Toolchain
+      - name: Install LLVM, Clang & Bootloader Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang lld llvm make file
+          sudo apt-get install -y clang lld llvm make file grub-pc-bin grub-common xorriso mtools
 
       - name: Build Airlys Kernel
         run: |
@@ -28,3 +28,18 @@ jobs:
         run: |
           file bin/airlys.elf
           llvm-readelf -h bin/airlys.elf
+
+      - name: Build Bootable Live ISO (GRUB2)
+        run: |
+          chmod +x scripts/build_iso.sh
+          ./scripts/build_iso.sh
+          ls -lh bin/
+
+      - name: Upload Bootable Airlys ISO & Kernel Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: airlys-live-bootable-iso
+          path: |
+            bin/airlys.iso
+            bin/airlys.elf
+          retention-days: 14
