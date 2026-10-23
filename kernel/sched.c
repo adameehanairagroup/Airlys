@@ -243,3 +243,19 @@ void sched_print_tasks(void) {
         vga_puts("\n");
     }
 }
+
+bool sched_kill_task(uint32_t pid) {
+    if (pid == 0) return false; /* Do not terminate PID 0 kernel main */
+
+    for (size_t i = 1; i < MAX_TASKS; i++) {
+        if (tasks[i].pid == pid && tasks[i].state != TASK_STATE_UNUSED && tasks[i].state != TASK_STATE_TERMINATED) {
+            tasks[i].state = TASK_STATE_TERMINATED;
+            if (tasks[i].stack_base != 0) {
+                kfree((void*)tasks[i].stack_base);
+                tasks[i].stack_base = 0;
+            }
+            return true;
+        }
+    }
+    return false;
+}

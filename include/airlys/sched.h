@@ -51,6 +51,9 @@ void sched_timer_tick(void);
 /* Get currently executing task pointer */
 task_t* sched_get_current(void);
 
+/* Terminate a specific task by PID (returns true if killed) */
+bool sched_kill_task(uint32_t pid);
+
 /* Print all active tasks in system to console */
 void sched_print_tasks(void);
 

@@ -129,6 +129,36 @@ vfs_node_t* ramfs_create_file(vfs_node_t* parent, const char* name, const char* 
     return file;
 }
 
+bool ramfs_delete_node(vfs_node_t* parent, const char* name) {
+    if (!parent || !name) return false;
+
+    for (uint32_t i = 0; i < parent->num_children; i++) {
+        if (kstrcmp(parent->children[i]->name, name) == 0) {
+            vfs_node_t* target = parent->children[i];
+
+            /* If directory, ensure it has no children */
+            if ((target->flags & VFS_DIRECTORY) && target->num_children > 0) {
+                return false; /* Directory not empty */
+            }
+
+            if (target->internal_data) {
+                kfree(target->internal_data);
+                target->internal_data = NULL;
+            }
+            kfree(target);
+
+            /* Shift remaining children left */
+            for (uint32_t j = i; j < parent->num_children - 1; j++) {
+                parent->children[j] = parent->children[j + 1];
+            }
+            parent->children[parent->num_children - 1] = NULL;
+            parent->num_children--;
+            return true;
+        }
+    }
+    return false;
+}
+
 vfs_node_t* ramfs_init(void) {
     /* Create Root "/" directory */
     vfs_node_t* root = ramfs_create_dir(NULL, "/");

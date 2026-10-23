@@ -139,8 +139,20 @@ void vga_putdec(uint64_t val) {
     }
 }
 
+static char vga_prompt_path[64] = "/home/user";
+
+void vga_set_prompt_path(const char* path) {
+    if (!path) return;
+    size_t i = 0;
+    while (path[i] != '\0' && i < sizeof(vga_prompt_path) - 1) {
+        vga_prompt_path[i] = path[i];
+        i++;
+    }
+    vga_prompt_path[i] = '\0';
+}
+
 void vga_print_prompt(void) {
-    /* Line 1: ┌──(root@airlys-os)-[/home/user] */
+    /* Line 1: ┌──(root@airlys-os)-[current_path] */
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     vga_putchar((char)0xDA); /* CP437 box top-left: ┌ */
     vga_putchar((char)0xC4); /* CP437 horizontal: ─ */
@@ -154,7 +166,7 @@ void vga_print_prompt(void) {
     vga_puts("@airlys-os)-[");
 
     vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
-    vga_puts("/home/user");
+    vga_puts(vga_prompt_path);
 
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
     vga_puts("]\n");
