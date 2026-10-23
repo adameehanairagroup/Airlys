@@ -138,8 +138,17 @@ qemu-system-x86_64 -kernel bin/airlys.elf
   - [ ] Initial RAMDisk (initrd / TarFS)
   - [ ] Interactive `airlys-sh` userland shell
 
-- [ ] **Phase 6: AiraLang Native Runtime Integration**
-  - [ ] Embedded AiraLang bytecode interpreter running directly in Ring 0/Ring 3.
+- [ ] **Phase 6: Sovereign Network Stack & AiraLang Engine**
+  - [ ] Gigabit Ethernet Driver (VirtIO-Net / Intel e1000)
+  - [ ] Native Freestanding TCP/IP, UDP, ARP & ICMP network stack
+  - [ ] Embedded AiraLang bytecode interpreter running natively in Ring 0 / Ring 3
+
+- [ ] **Phase 7: Unified Sovereign Desktop (GUI), AiraStore & Standby AI**
+  - [ ] High-Resolution VESA BIOS Extensions (VBE) & UEFI GOP Framebuffer Graphics Driver (1080p/4K)
+  - [ ] Native Window Compositor, TrueType/Bitmap Font Engine & Cyber Eagle Dark Cyan UI
+  - [ ] Essential Desktop Suite: `airlys-term`, `airlys-files`, `aira-code` Studio & Task Manager
+  - [ ] **AiraStore**: Open-source sovereign app store with 4-tier anti-phishing sandbox & APK runtime
+  - [ ] **Low-Power Neural Standby**: ACPI S0ix modern standby kernel scheduler for 2W 24/7 background AI inference
 
 ---
 
