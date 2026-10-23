@@ -30,6 +30,9 @@
 #include <airlys/initramfs.h>
 #include <airlys/init.h>
 #include <airlys/airalang.h>
+#include <airlys/vbe.h>
+#include <airlys/compositor.h>
+#include <airlys/apps.h>
 
 static void aira_sentinel_task(void) {
     /* Background Sovereign Sentinel Health Daemon */
@@ -154,18 +157,22 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     initramfs_init();
     vga_puts(" [OK] Virtual File System (VFS)  : In-Memory RamFS, /proc, /dev & /usr mounted\n");
 
-    /* Step 14: Phase 5 - Interactive Userland Shell (airlys-sh) */
+    /* Step 14: Phase 7 - VESA Linear Framebuffer & Desktop Window Compositor */
+    compositor_init();
+    vga_puts(" [OK] Desktop Shell Compositor   : VBE 1024x768 @ 32bpp TrueColor & Acrylic Ready\n");
+
+    /* Step 15: Phase 5 - Interactive Userland Shell (airlys-sh) */
     shell_init();
     vga_puts(" [OK] Sovereign Userland Shell   : airlys-sh active & command dispatcher ready\n");
 
-    /* Step 15: Enable CPU Hardware Interrupts */
+    /* Step 16: Enable CPU Hardware Interrupts */
     __asm__ volatile ("sti");
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
     vga_puts(" [OK] Hardware Interrupts Active : STI executed (IF=1)\n");
 
     vga_set_color(VGA_COLOR_LIGHT_MAGENTA, VGA_COLOR_BLACK);
     vga_puts("\n ------------------------------------------------------------------------------\n");
-    vga_puts(" >>> Interactive Console Active. Type on your keyboard to test hardware input:\n");
+    vga_puts(" >>> Type 'start-desktop' or 'airlys-gui' to enter the Sovereign Desktop Shell!\n");
     vga_puts(" ------------------------------------------------------------------------------\n\n");
 
     vga_print_prompt();
