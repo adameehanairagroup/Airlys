@@ -1,0 +1,30 @@
+name: Airlys Kernel Build & Verify
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Compile & Link x86_64 Kernel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Install LLVM & Clang Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld llvm make file
+
+      - name: Build Airlys Kernel
+        run: |
+          make clean
+          make
+
+      - name: Verify ELF Executable
+        run: |
+          file bin/airlys.elf
+          llvm-readelf -h bin/airlys.elf
