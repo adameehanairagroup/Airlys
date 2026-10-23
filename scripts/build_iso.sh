@@ -27,7 +27,7 @@ insmod efi_uga
 insmod font
 
 set gfxmode=1920x1080x32,1024x768x32,auto
-set gfxpayload=keep
+set gfxpayload=1920x1080x32,1024x768x32,auto
 
 set timeout=5
 set default=0
@@ -35,15 +35,14 @@ set default=0
 menuentry "Airlys Sovereign OS (Acer Nitro Bare Metal & UEFI GOP)" {
     insmod all_video
     insmod efi_gop
-    set gfxpayload=keep
+    set gfxpayload=1920x1080x32,1024x768x32,auto
     multiboot2 /boot/airlys.elf
     boot
 }
 
 menuentry "Airlys Sovereign OS (1024x768 TrueColor Framebuffer)" {
     insmod all_video
-    set gfxmode=1024x768x32,auto
-    set gfxpayload=1024x768x32,keep
+    set gfxpayload=1024x768x32,auto
     multiboot2 /boot/airlys.elf
     boot
 }
@@ -51,15 +50,14 @@ menuentry "Airlys Sovereign OS (1024x768 TrueColor Framebuffer)" {
 menuentry "Airlys Sovereign OS (1920x1080 Native FHD Framebuffer)" {
     insmod all_video
     insmod efi_gop
-    set gfxmode=1920x1080x32,auto
-    set gfxpayload=1920x1080x32,keep
+    set gfxpayload=1920x1080x32,auto
     multiboot2 /boot/airlys.elf
     boot
 }
 
 menuentry "Airlys Sovereign OS (Fallback Multiboot 1)" {
     insmod all_video
-    set gfxpayload=keep
+    set gfxpayload=auto
     multiboot /boot/airlys.elf
     boot
 }

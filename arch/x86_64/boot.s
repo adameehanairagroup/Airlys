@@ -122,21 +122,6 @@ map_pd_loop:
     cmpl $4096, %ecx
     jne map_pd_loop
 
-    /* Identity map entries 8..511 of PDPT using 1GB huge pages (8GB .. 512GB) */
-    movl $8, %ecx
-map_1gb_loop:
-    movl %ecx, %eax
-    shll $30, %eax
-    orl $0x83, %eax         /* Present + Writable + Huge 1GB Page (bit 7) */
-    movl %ecx, %edx
-    shrl $2, %edx
-    movl $pdpt_table, %ebx
-    movl %eax, (%ebx, %ecx, 8)
-    movl %edx, 4(%ebx, %ecx, 8)
-    incl %ecx
-    cmpl $512, %ecx
-    jne map_1gb_loop
-
     /* Load CR3 with physical address of PML4 */
     movl $pml4_table, %eax
     movl %eax, %cr3

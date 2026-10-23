@@ -45,7 +45,7 @@ static void aira_sentinel_task(void) {
 }
 
 void kernel_main(uint64_t magic, uint64_t addr) {
-    /* Step 0: Extract Hardware Framebuffer immediately (UEFI GOP / VBE Tag 16) */
+    /* Step 0: Extract Hardware Framebuffer immediately (UEFI GOP / VBE Tag 16 / MB1) */
     if (magic == 0x36D76289 && addr != 0) {
         uint32_t total_size = *(volatile uint32_t*)addr;
         uint8_t* tag_ptr = (uint8_t*)(addr + 8);
@@ -63,7 +63,7 @@ void kernel_main(uint64_t magic, uint64_t addr) {
                 uint32_t h       = *(volatile uint32_t*)(tag_ptr + 24);
                 uint8_t  bpp     = *(volatile uint8_t*)(tag_ptr + 28);
 
-                if (fb_phys != 0 && w >= 640 && h >= 480) {
+                if (fb_phys != 0 && w >= 320 && h >= 200) {
                     vbe_set_physical_framebuffer(fb_phys, w, h, pitch, (uint32_t)bpp);
                     vbe_early_boot_splash();
                     break;
@@ -71,6 +71,21 @@ void kernel_main(uint64_t magic, uint64_t addr) {
             }
 
             tag_ptr += (tag_size + 7) & ~7;
+        }
+    } else if (magic == 0x2BADB002 && addr != 0) {
+        /* Multiboot 1 Framebuffer Tag Parsing */
+        uint32_t mb1_flags = *(volatile uint32_t*)addr;
+        if (mb1_flags & (1 << 12)) {
+            uint64_t fb_phys = *(volatile uint64_t*)(addr + 88);
+            uint32_t pitch   = *(volatile uint32_t*)(addr + 96);
+            uint32_t w       = *(volatile uint32_t*)(addr + 100);
+            uint32_t h       = *(volatile uint32_t*)(addr + 104);
+            uint8_t  bpp     = *(volatile uint8_t*)(addr + 108);
+
+            if (fb_phys != 0 && w >= 320 && h >= 200) {
+                vbe_set_physical_framebuffer(fb_phys, w, h, pitch, (uint32_t)bpp);
+                vbe_early_boot_splash();
+            }
         }
     }
 
