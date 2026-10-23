@@ -5,6 +5,7 @@
 #include <airlys/heap.h>
 #include <airlys/sched.h>
 #include <airlys/io.h>
+#include <airlys/ramfs.h>
 
 static char shell_buffer[SHELL_MAX_INPUT];
 static size_t shell_pos = 0;
@@ -31,6 +32,8 @@ static void cmd_help(void) {
     vga_puts("  clear      - Clear the VGA terminal screen\n");
     vga_puts("  ls [dir]   - List contents of a VFS directory (default: /)\n");
     vga_puts("  cat <file> - Read and display file contents\n");
+    vga_puts("  mkdir <dir>- Create a new directory / folder\n");
+    vga_puts("  touch <f>  - Create a new empty file\n");
     vga_puts("  echo <msg> - Print message to terminal\n");
     vga_puts("  whoami     - Print active user & sovereign authority\n");
     vga_puts("  uname      - Print kernel name, architecture & version\n");
@@ -125,6 +128,134 @@ static void cmd_cat(const char* path) {
         buf[read_bytes] = '\0';
         vga_puts(buf);
         offset += read_bytes;
+    }
+}
+
+static void split_path(const char* full_path, char* parent_buf, size_t parent_len, char* name_buf, size_t name_len) {
+    int last_slash = -1;
+    for (int i = 0; full_path[i] != '\0'; i++) {
+        if (full_path[i] == '/') last_slash = i;
+    }
+
+    if (last_slash == -1) {
+        /* Default to /home/user */
+        size_t j = 0;
+        const char* def_parent = "/home/user";
+        while (def_parent[j] != '\0' && j < parent_len - 1) {
+            parent_buf[j] = def_parent[j];
+            j++;
+        }
+        parent_buf[j] = '\0';
+
+        j = 0;
+        while (full_path[j] != '\0' && j < name_len - 1) {
+            name_buf[j] = full_path[j];
+            j++;
+        }
+        name_buf[j] = '\0';
+    } else if (last_slash == 0) {
+        parent_buf[0] = '/';
+        parent_buf[1] = '\0';
+        size_t j = 0;
+        const char* p = full_path + 1;
+        while (p[j] != '\0' && j < name_len - 1) {
+            name_buf[j] = p[j];
+            j++;
+        }
+        name_buf[j] = '\0';
+    } else {
+        size_t j = 0;
+        while (j < (size_t)last_slash && j < parent_len - 1) {
+            parent_buf[j] = full_path[j];
+            j++;
+        }
+        parent_buf[j] = '\0';
+
+        j = 0;
+        const char* p = full_path + last_slash + 1;
+        while (p[j] != '\0' && j < name_len - 1) {
+            name_buf[j] = p[j];
+            j++;
+        }
+        name_buf[j] = '\0';
+    }
+}
+
+static void cmd_mkdir(const char* path) {
+    if (!path || *path == '\0') {
+        vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+        vga_puts("mkdir: missing directory operand\n");
+        return;
+    }
+
+    char parent_path[128];
+    char dir_name[64];
+    split_path(path, parent_path, sizeof(parent_path), dir_name, sizeof(dir_name));
+
+    vfs_node_t* parent = vfs_resolve_path(parent_path);
+    if (!parent) {
+        vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+        vga_puts("mkdir: cannot create directory '");
+        vga_puts(path);
+        vga_puts("': Parent directory not found\n");
+        return;
+    }
+
+    if (vfs_finddir(parent, dir_name) != NULL) {
+        vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+        vga_puts("mkdir: cannot create directory '");
+        vga_puts(dir_name);
+        vga_puts("': File or directory already exists\n");
+        return;
+    }
+
+    vfs_node_t* new_dir = ramfs_create_dir(parent, dir_name);
+    if (new_dir) {
+        vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+        vga_puts("[OK] Created directory: ");
+        vga_puts(parent_path);
+        vga_puts("/");
+        vga_puts(dir_name);
+        vga_puts("\n");
+    }
+}
+
+static void cmd_touch(const char* path) {
+    if (!path || *path == '\0') {
+        vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+        vga_puts("touch: missing file operand\n");
+        return;
+    }
+
+    char parent_path[128];
+    char file_name[64];
+    split_path(path, parent_path, sizeof(parent_path), file_name, sizeof(file_name));
+
+    vfs_node_t* parent = vfs_resolve_path(parent_path);
+    if (!parent) {
+        vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+        vga_puts("touch: cannot touch '");
+        vga_puts(path);
+        vga_puts("': Directory not found\n");
+        return;
+    }
+
+    if (vfs_finddir(parent, file_name) != NULL) {
+        vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+        vga_puts("[OK] Updated file timestamp: ");
+        vga_puts(file_name);
+        vga_puts("\n");
+        return;
+    }
+
+    vfs_node_t* new_file = ramfs_create_file(parent, file_name, "");
+    if (new_file) {
+        vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+        vga_puts("[OK] Created file: ");
+        vga_puts(parent_path);
+        vga_puts("/");
+        vga_puts(file_name);
+        vga_puts("\n");
     }
 }
 
@@ -247,6 +378,10 @@ void shell_execute(const char* cmdline) {
         cmd_clear();
     } else if (kstrcmp(cmd, "ls") == 0) {
         cmd_ls(args);
+    } else if (kstrcmp(cmd, "mkdir") == 0) {
+        cmd_mkdir(args);
+    } else if (kstrcmp(cmd, "touch") == 0) {
+        cmd_touch(args);
     } else if (kstrcmp(cmd, "cat") == 0) {
         cmd_cat(args);
     } else if (kstrcmp(cmd, "echo") == 0) {
