@@ -1,0 +1,21 @@
+#ifndef AIRLYS_PIC_H
+#define AIRLYS_PIC_H
+
+#include <airlys/types.h>
+
+#define PIC1_COMMAND 0x20
+#define PIC1_DATA    0x21
+#define PIC2_COMMAND 0xA0
+#define PIC2_DATA    0xA1
+
+#define PIC_EOI      0x20
+
+#define PIC1_OFFSET  32
+#define PIC2_OFFSET  40
+
+void pic_init(void);
+void pic_send_eoi(uint8_t irq);
+void pic_mask_irq(uint8_t irq);
+void pic_unmask_irq(uint8_t irq);
+
+#endif /* AIRLYS_PIC_H */

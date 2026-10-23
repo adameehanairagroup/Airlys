@@ -116,11 +116,12 @@ qemu-system-x86_64 -kernel bin/airlys.elf
   - [x] Failsafe Kernel Panic screen
   - [x] Clean zero-warning freestanding build system (`clang` + `ld.lld`)
 
-- [ ] **Phase 2: CPU Interrupts & Hardware Timing**
-  - [ ] Interrupt Descriptor Table (IDT64) & ISR gates
-  - [ ] 8259 PIC initialization & remapping
-  - [ ] Programmable Interval Timer (PIT) frequency driver
-  - [ ] PS/2 Keyboard hardware scan-code decoder
+- [x] **Phase 2: CPU Interrupts & Hardware Timing**
+  - [x] Interrupt Descriptor Table (IDT64) & 256 gates (CPU exceptions 0..31)
+  - [x] Dual 8259 PIC remapping (Master 32..39, Slave 40..47) with EOI handling
+  - [x] Programmable Interval Timer (PIT 8254) running at 100 Hz (10ms preemptive ticks)
+  - [x] PS/2 Hardware Keyboard driver with Scan Code Set 1 decoding
+  - [x] CPU hardware interrupts enabled (`sti`) with live interactive keyboard typing!
 
 - [ ] **Phase 3: Sovereign Memory Subsystem**
   - [ ] Physical Memory Manager (Bitmap Page Allocator)

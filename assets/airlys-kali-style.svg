@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="100%" height="100%">
+  <defs>
+    <!-- Kali-style Vibrant Blue/Cyan Gradient -->
+    <linearGradient id="kaliBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe"/>
+      <stop offset="40%" stop-color="#00a8ff"/>
+      <stop offset="100%" stop-color="#0051ff"/>
+    </linearGradient>
+
+    <!-- Subtle Glow for Wallpaper Look -->
+    <filter id="kaliGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Deep Pure Black Background like Kali Linux -->
+  <rect width="1000" height="1000" fill="#06090e"/>
+
+  <!-- Kali-Style Minimalist Tribal/Cyber Eagle Silhouette -->
+  <g transform="translate(100, 120) scale(0.8)" filter="url(#kaliGlow)">
+    
+    <!-- Left Main Sweeping Wing (Tribal Curves) -->
+    <path d="M 500 350
+             C 420 220 280 120 80 100
+             C 120 180 200 240 280 280
+             C 180 260 90 320 40 380
+             C 120 400 220 410 310 410
+             C 210 420 120 490 80 560
+             C 160 550 250 530 340 500
+             C 240 540 180 620 150 700
+             C 230 660 320 610 400 560
+             C 320 620 280 710 260 800
+             C 340 730 420 660 480 580
+             C 450 660 430 760 430 850
+             C 480 770 510 680 520 590
+             Z"
+          fill="url(#kaliBlue)"/>
+
+    <!-- Right Main Sweeping Wing (Mirrored Dynamic Curves) -->
+    <path d="M 500 350
+             C 580 220 720 120 920 100
+             C 880 180 800 240 720 280
+             C 820 260 910 320 960 380
+             C 880 400 780 410 690 410
+             C 790 420 880 490 920 560
+             C 840 550 750 530 660 500
+             C 760 540 820 620 850 700
+             C 770 660 680 610 600 560
+             C 680 620 720 710 740 800
+             C 660 730 580 660 520 580
+             C 550 660 570 760 570 850
+             C 520 770 490 680 480 590
+             Z"
+          fill="url(#kaliBlue)"/>
+
+    <!-- Eagle Head, Crown & Hooked Beak (Sleek Tribal Profile) -->
+    <path d="M 500 180
+             C 480 120 450 80 420 50
+             C 460 70 490 100 500 130
+             C 520 70 560 30 620 10
+             C 590 60 560 110 550 160
+             C 580 130 630 110 680 100
+             C 640 150 590 190 560 230
+             C 600 240 640 260 670 300
+             C 610 290 560 300 530 340
+             C 525 360 515 390 500 420
+             C 485 390 475 360 470 340
+             C 440 300 390 290 330 300
+             C 360 260 400 240 440 230
+             C 410 190 360 150 320 100
+             C 370 110 420 130 450 160
+             Z"
+          fill="url(#kaliBlue)"/>
+
+    <!-- Piercing Diamond Negative Space Eye -->
+    <polygon points="460,260 480,240 500,260 480,270" fill="#06090e"/>
+    <polygon points="540,260 520,240 500,260 520,270" fill="#06090e"/>
+
+    <!-- Aggressive Center Beak Blade -->
+    <path d="M 485 280
+             C 495 320 500 350 500 390
+             C 500 350 505 320 515 280
+             Z"
+          fill="#ffffff"/>
+
+    <!-- Center Chest Split Line (Kali-style Negative Space Blade) -->
+    <path d="M 500 430
+             L 500 620
+             L 485 530
+             Z"
+          fill="#06090e"/>
+    <path d="M 500 430
+             L 500 620
+             L 515 530
+             Z"
+          fill="#06090e"/>
+
+    <!-- Dynamic Tail Blade (Kali-style sharp swooping fin) -->
+    <path d="M 470 650
+             C 485 750 495 830 500 920
+             C 505 830 515 750 530 650
+             L 500 700
+             Z"
+          fill="url(#kaliBlue)"/>
+  </g>
+
+  <!-- Sleek Kali-Style Typographic Branding at Bottom -->
+  <text x="500" y="930" font-family="'Orbitron', 'Inter', monospace, sans-serif" font-size="34" font-weight="900" letter-spacing="16" fill="#ffffff" text-anchor="middle">AIRLYS</text>
+  <text x="500" y="960" font-family="'Inter', monospace, sans-serif" font-size="11" font-weight="600" letter-spacing="6" fill="#00f2fe" text-anchor="middle" opacity="0.8">THE SOVEREIGN KERNEL</text>
+</svg>

@@ -19,8 +19,16 @@ BIN_DIR     := bin
 KERNEL_BIN  := $(BIN_DIR)/airlys.elf
 
 # Sources
-C_SRCS      := kernel/kmain.c kernel/vga.c kernel/panic.c
-ASM_SRCS    := arch/x86_64/boot.s
+C_SRCS      := kernel/kmain.c \
+               kernel/vga.c \
+               kernel/panic.c \
+               kernel/pic.c \
+               kernel/timer.c \
+               kernel/keyboard.c \
+               arch/x86_64/idt.c
+
+ASM_SRCS    := arch/x86_64/boot.s \
+               arch/x86_64/interrupts.s
 
 # Objects
 OBJS        := $(patsubst %.c, $(BUILD_DIR)/%.o, $(C_SRCS)) \
