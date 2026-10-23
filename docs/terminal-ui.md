@@ -37,6 +37,14 @@
 
 ---
 
+## 🦅 Background Watermark & UX Architecture
+- **Base Terminal Canvas:** Deep Void Black (`#080C10`)
+- **Emblem Watermark:** Centered **Airlys Cyber Eagle** tribal silhouette.
+- **Opacity Profile:** **5% - 8% Alpha Translucency** (Ultra-low opacity).
+- **UX Experience:** Zero visual fatigue / zero distraction for developers during 12-hour coding marathons, with 100% crystal-clear font readability while maintaining our sovereign Cyber Eagle soul!
+
+---
+
 ## 🕹️ Interactive Session Preview
 
 ```text
