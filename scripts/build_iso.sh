@@ -21,15 +21,37 @@ mkdir -p "${ISO_DIR}/boot/grub"
 cp "${KERNEL}" "${ISO_DIR}/boot/airlys.elf"
 
 cat << 'EOF' > "${ISO_DIR}/boot/grub/grub.cfg"
+insmod all_video
+insmod efi_gop
+insmod efi_uga
+insmod font
+
+set gfxmode=auto
+set gfxpayload=keep
+
 set timeout=5
 set default=0
 
-menuentry "Airlys Sovereign OS (x86_64 Long Mode)" {
+menuentry "Airlys Sovereign OS (x86_64 Long Mode - UEFI GOP)" {
+    insmod all_video
+    insmod efi_gop
+    insmod efi_uga
+    set gfxpayload=keep
+    multiboot2 /boot/airlys.elf
+    boot
+}
+
+menuentry "Airlys Sovereign OS (1024x768 TrueColor Framebuffer)" {
+    insmod all_video
+    set gfxmode=1024x768x32,auto
+    set gfxpayload=1024x768x32,keep
     multiboot2 /boot/airlys.elf
     boot
 }
 
 menuentry "Airlys Sovereign OS (Fallback Multiboot 1)" {
+    insmod all_video
+    set gfxpayload=keep
     multiboot /boot/airlys.elf
     boot
 }

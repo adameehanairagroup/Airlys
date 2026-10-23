@@ -25,7 +25,18 @@ multiboot2_header:
     .long MB2_ARCH
     .long MB2_LENGTH
     .long MB2_CHECKSUM
+
+    /* Framebuffer Request Tag (Type 5) - Requests UEFI GOP / VBE 1024x768 @ 32bpp */
+    .align 8
+    .short 5              /* type = 5 (Framebuffer) */
+    .short 1              /* flags = 1 (Optional, safe on all firmware) */
+    .long 20              /* size = 20 bytes */
+    .long 1024            /* width = 1024 */
+    .long 768             /* height = 768 */
+    .long 32              /* depth = 32bpp */
+
     /* End tag */
+    .align 8
     .short 0
     .short 0
     .long 8
