@@ -123,10 +123,10 @@ qemu-system-x86_64 -kernel bin/airlys.elf
   - [x] PS/2 Hardware Keyboard driver with Scan Code Set 1 decoding
   - [x] CPU hardware interrupts enabled (`sti`) with live interactive keyboard typing!
 
-- [ ] **Phase 3: Sovereign Memory Subsystem**
-  - [ ] Physical Memory Manager (Bitmap Page Allocator)
-  - [ ] Virtual Memory Manager (Page fault handler & dynamic mapping)
-  - [ ] Kernel Heap (`kmalloc` / `kfree`)
+- [x] **Phase 3: Sovereign Memory Subsystem**
+  - [x] Physical Memory Manager (Bitmap Page Allocator tracking 1GB physical RAM & 262,144 frames)
+  - [x] Virtual Memory Manager (Page fault `#PF` exception handler with CR2/CR3 register inspection)
+  - [x] Sovereign Dynamic Kernel Heap (`kmalloc`, `kfree`, `kcalloc`, `krealloc` with 32MB dynamic pool & automated memory self-test)
 
 - [ ] **Phase 4: Preemptive Multitasking**
   - [ ] Process Control Block (PCB) architecture

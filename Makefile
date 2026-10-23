@@ -25,6 +25,9 @@ C_SRCS      := kernel/kmain.c \
                kernel/pic.c \
                kernel/timer.c \
                kernel/keyboard.c \
+               kernel/pmm.c \
+               kernel/vmm.c \
+               kernel/heap.c \
                arch/x86_64/idt.c
 
 ASM_SRCS    := arch/x86_64/boot.s \

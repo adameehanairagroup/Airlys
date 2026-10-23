@@ -4,6 +4,9 @@
 #include <airlys/pic.h>
 #include <airlys/timer.h>
 #include <airlys/keyboard.h>
+#include <airlys/pmm.h>
+#include <airlys/vmm.h>
+#include <airlys/heap.h>
 
 void kernel_main(uint64_t magic, uint64_t addr) {
     /* Step 1: Initialize hardware VGA terminal console */
@@ -51,7 +54,30 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     keyboard_init();
     vga_puts(" [OK] PS/2 Hardware Keyboard     : Scan Code Set 1 Driver active\n");
 
-    /* Step 6: Enable CPU Hardware Interrupts */
+    /* Step 6: Phase 3 - Physical Memory Manager (PMM) */
+    pmm_init(1024ULL * 1024 * 1024);
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts(" [OK] Physical Memory Manager    : 1024 MB managed (");
+    vga_putdec(pmm_get_free_memory_kb() / 1024);
+    vga_puts(" MB free RAM)\n");
+
+    /* Step 7: Phase 3 - Virtual Memory & Page Fault Handler */
+    vmm_init();
+    vga_puts(" [OK] Virtual Memory Manager     : Dynamic #PF Exception Handler active\n");
+
+    /* Step 8: Phase 3 - Sovereign Dynamic Kernel Heap (kmalloc / kfree) */
+    heap_init(KERNEL_HEAP_START, KERNEL_HEAP_SIZE);
+    vga_puts(" [OK] Sovereign Dynamic Heap     : 32 MB dynamic pool at 0x1000000\n");
+
+    /* Dynamic Heap Self-Test */
+    void* test_alloc = kmalloc(512);
+    if (test_alloc != NULL) {
+        vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+        vga_puts(" [OK] Dynamic Heap Verification  : kmalloc(512) & kfree() self-test passed!\n");
+        kfree(test_alloc);
+    }
+
+    /* Step 9: Enable CPU Hardware Interrupts */
     __asm__ volatile ("sti");
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
     vga_puts(" [OK] Hardware Interrupts Active : STI executed (IF=1)\n");

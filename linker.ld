@@ -9,6 +9,7 @@ SECTIONS
 {
     /* Load kernel at 1MB (standard Multiboot load boundary) */
     . = 1M;
+    _kernel_start = .;
 
     /* Multiboot Header & Executable Code */
     .text : ALIGN(4K)
@@ -35,6 +36,9 @@ SECTIONS
         *(COMMON)
         *(.bss .bss.*)
     }
+
+    . = ALIGN(4K);
+    _kernel_end = .;
 
     /* Discard unused unwind & debug sections */
     /DISCARD/ :
