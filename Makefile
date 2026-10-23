@@ -20,19 +20,21 @@ KERNEL_BIN  := $(BIN_DIR)/airlys.elf
 
 # Sources
 C_SRCS      := kernel/kmain.c \
-               kernel/vga.c \
                kernel/panic.c \
-               kernel/pic.c \
-               kernel/timer.c \
-               kernel/keyboard.c \
-               kernel/pmm.c \
-               kernel/vmm.c \
-               kernel/heap.c \
                kernel/sched.c \
                kernel/syscall.c \
-               kernel/vfs.c \
-               kernel/ramfs.c \
                kernel/shell.c \
+               mm/pmm.c \
+               mm/vmm.c \
+               mm/heap.c \
+               fs/vfs.c \
+               fs/ramfs.c \
+               drivers/vga.c \
+               drivers/keyboard.c \
+               drivers/timer.c \
+               drivers/pic.c \
+               security/sentinel.c \
+               lib/string.c \
                arch/x86_64/idt.c
 
 ASM_SRCS    := arch/x86_64/boot.s \
