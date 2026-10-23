@@ -53,6 +53,16 @@ void vga_clear(void) {
 }
 
 void vga_putchar(char c) {
+    if (c == '\b') {
+        if (vga_column > 0) {
+            vga_column--;
+            const size_t index = vga_row * VGA_WIDTH + vga_column;
+            vga_buffer[index] = vga_entry(' ', vga_current_color);
+            vga_update_cursor();
+        }
+        return;
+    }
+
     if (c == '\n') {
         vga_column = 0;
         if (++vga_row == VGA_HEIGHT) {

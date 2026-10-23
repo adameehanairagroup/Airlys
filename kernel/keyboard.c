@@ -61,7 +61,14 @@ static void keyboard_callback(registers_t* regs) {
     if (scancode < 128) {
         char c = shift_pressed ? kbd_scancode_shift[scancode] : kbd_scancode_normal[scancode];
         if (c != 0) {
-            vga_putchar(c);
+            if (c == '\n') {
+                vga_putchar('\n');
+                vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+                vga_puts("Airlys >>> ");
+                vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+            } else {
+                vga_putchar(c);
+            }
         }
     }
 }

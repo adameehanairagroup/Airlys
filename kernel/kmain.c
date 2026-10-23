@@ -62,7 +62,8 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     vga_puts(" ------------------------------------------------------------------------------\n\n");
 
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-    vga_puts("airlys> ");
+    vga_puts("Airlys >>> ");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
 
     /* Infinite safe idle loop awaiting hardware interrupts */
     for (;;) {
