@@ -51,3 +51,12 @@ void* kmemset(void* s, int c, size_t n) {
     }
     return s;
 }
+
+/* Freestanding compiler intrinsics */
+void* memcpy(void* dest, const void* src, size_t n) {
+    return kmemcpy(dest, src, n);
+}
+
+void* memset(void* s, int c, size_t n) {
+    return kmemset(s, c, n);
+}

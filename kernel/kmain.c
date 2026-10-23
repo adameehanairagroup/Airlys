@@ -12,6 +12,13 @@
 #include <airlys/vfs.h>
 #include <airlys/ramfs.h>
 #include <airlys/shell.h>
+#include <airlys/printk.h>
+#include <airlys/rtc.h>
+#include <airlys/serial.h>
+#include <airlys/procfs.h>
+#include <airlys/devfs.h>
+#include <airlys/slab.h>
+#include <airlys/security.h>
 
 static void aira_sentinel_task(void) {
     /* Background Sovereign Sentinel Health Daemon */
@@ -109,17 +116,28 @@ void kernel_main(uint64_t magic, uint64_t addr) {
         vga_puts("] running\n");
     }
 
-    /* Step 11: Phase 5 - Virtual File System (VFS) & In-Memory RamFS */
+    /* Step 11: Linux Core Subsystems - Slab Cache & Security Sentinel */
+    slab_init();
+    security_init();
+    rtc_init();
+    serial_init();
+    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+    vga_puts(" [OK] Linux Slab Cache Allocator : kmem_cache subsystem online\n");
+    vga_puts(" [OK] 16550A UART Serial Driver  : COM1 (0x3F8) 115200 baud active\n");
+    vga_puts(" [OK] CMOS Real Time Clock (RTC) : Synchronized with hardware clock\n");
+
+    /* Step 12: Phase 5 - Virtual File System (VFS), In-Memory RamFS, /proc & /dev */
     vfs_init();
     ramfs_init();
-    vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-    vga_puts(" [OK] Virtual File System (VFS)  : In-Memory RamFS mounted on '/'\n");
+    devfs_init();
+    procfs_init();
+    vga_puts(" [OK] Virtual File System (VFS)  : In-Memory RamFS, /proc & /dev mounted\n");
 
-    /* Step 12: Phase 5 - Interactive Userland Shell (airlys-sh) */
+    /* Step 13: Phase 5 - Interactive Userland Shell (airlys-sh) */
     shell_init();
     vga_puts(" [OK] Sovereign Userland Shell   : airlys-sh active & command dispatcher ready\n");
 
-    /* Step 13: Enable CPU Hardware Interrupts */
+    /* Step 14: Enable CPU Hardware Interrupts */
     __asm__ volatile ("sti");
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
     vga_puts(" [OK] Hardware Interrupts Active : STI executed (IF=1)\n");

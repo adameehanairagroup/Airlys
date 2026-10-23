@@ -7,6 +7,8 @@
 #include <airlys/sched.h>
 #include <airlys/timer.h>
 #include <airlys/io.h>
+#include <airlys/rtc.h>
+#include <airlys/printk.h>
 
 static char shell_buffer[SHELL_MAX_INPUT];
 static size_t shell_pos = 0;
@@ -423,8 +425,26 @@ static void cmd_uptime(void) {
 }
 
 static void cmd_date(void) {
+    rtc_time_t t = rtc_get_time();
     vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
-    vga_puts("System Clock: Fri Oct 23 2026 12:45:00 UTC (Sovereign Hardware Clock Sync)\n");
+    vga_puts("Hardware RTC Clock: ");
+    vga_putdec(t.year);
+    vga_putchar('-');
+    if (t.month < 10) vga_putchar('0');
+    vga_putdec(t.month);
+    vga_putchar('-');
+    if (t.day < 10) vga_putchar('0');
+    vga_putdec(t.day);
+    vga_putchar(' ');
+    if (t.hour < 10) vga_putchar('0');
+    vga_putdec(t.hour);
+    vga_putchar(':');
+    if (t.minute < 10) vga_putchar('0');
+    vga_putdec(t.minute);
+    vga_putchar(':');
+    if (t.second < 10) vga_putchar('0');
+    vga_putdec(t.second);
+    vga_puts(" UTC (Motherboard CMOS Sync)\n");
 }
 
 static void cmd_dmesg(void) {

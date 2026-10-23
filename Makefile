@@ -24,15 +24,21 @@ C_SRCS      := kernel/kmain.c \
                kernel/sched.c \
                kernel/syscall.c \
                kernel/shell.c \
+               kernel/printk.c \
                mm/pmm.c \
                mm/vmm.c \
                mm/heap.c \
+               mm/slab.c \
                fs/vfs.c \
                fs/ramfs.c \
+               fs/procfs.c \
+               fs/devfs.c \
                drivers/vga.c \
                drivers/keyboard.c \
                drivers/timer.c \
                drivers/pic.c \
+               drivers/rtc.c \
+               drivers/serial.c \
                security/sentinel.c \
                lib/string.c \
                arch/x86_64/idt.c
