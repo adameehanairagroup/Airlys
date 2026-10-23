@@ -60,7 +60,6 @@ int initramfs_unpack(const void* data, size_t size) {
 
         /* Is Directory */
         if ((mode & 0170000) == 0040000) {
-            /* Create directory in VFS */
             if (kstrcmp(filename, ".") != 0) {
                 ramfs_create_dir(root, filename);
                 g_initramfs_status.total_dirs++;
@@ -68,7 +67,6 @@ int initramfs_unpack(const void* data, size_t size) {
         }
         /* Is Regular File */
         else if ((mode & 0170000) == 0100000) {
-            /* For now, text/small payload copy */
             char temp_content[512];
             size_t copy_len = filesize < 511 ? filesize : 511;
             kmemcpy(temp_content, ptr, copy_len);
@@ -130,8 +128,28 @@ void initramfs_init(void) {
         g_initramfs_status.total_files += 5;
     }
 
+    vfs_node_t* home_dir = vfs_finddir(root, "home");
+    if (home_dir) {
+        vfs_node_t* user_dir = vfs_finddir(home_dir, "user");
+        if (user_dir) {
+            const char* aira_script =
+                "# AiraLang Native Ring 0 Script\n"
+                "say \"=== Hello Boss! AiraLang running in Airlys Kernel ===\"\n"
+                "let founder = \"Er. Adam Eehan\"\n"
+                "say \"Lead Architect: \"\n"
+                "say founder\n"
+                "let unit = 100\n"
+                "say \"Active Quantum Unit: \"\n"
+                "say unit\n"
+                "beep(880, 200)\n"
+                "say \"Execution Finished Cleanly!\"\n";
+            ramfs_create_file(user_dir, "demo.aira", aira_script);
+            g_initramfs_status.total_files++;
+        }
+    }
+
     g_initramfs_status.initialized = true;
-    printk(KERN_INFO "initramfs: Populated Linux canonical rootfs hierarchy (/usr, /etc, /var, /sbin)\n");
+    printk(KERN_INFO "initramfs: Populated Linux canonical rootfs hierarchy (/usr, /etc, /var, /sbin, /home)\n");
 }
 
 initramfs_status_t initramfs_get_status(void) {

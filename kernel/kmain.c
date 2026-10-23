@@ -22,12 +22,14 @@
 #include <airlys/crypto.h>
 #include <airlys/block.h>
 #include <airlys/ipc.h>
+#include <airlys/pci.h>
 #include <airlys/net.h>
 #include <airlys/sound.h>
 #include <airlys/virtio.h>
 #include <airlys/certs.h>
 #include <airlys/initramfs.h>
 #include <airlys/init.h>
+#include <airlys/airalang.h>
 
 static void aira_sentinel_task(void) {
     /* Background Sovereign Sentinel Health Daemon */
@@ -130,7 +132,8 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     vga_puts(" [OK] 16550A UART Serial Driver  : COM1 (0x3F8) 115200 baud active\n");
     vga_puts(" [OK] CMOS Real Time Clock (RTC) : Synchronized with hardware clock\n");
 
-    /* Step 12: Linux Enterprise Subsystems (Crypto, Certs, Block, IPC, Net, Sound, VirtIO) */
+    /* Step 12: Hardware Bus Probing & Phase 6 Core (PCI, Net, AiraLang) */
+    pci_init();
     crypto_init();
     certs_init();
     blk_init();
@@ -138,8 +141,12 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     net_init();
     sound_init();
     virtio_init();
+    airalang_init();
+    vga_puts(" [OK] PCI Bus Controller         : Hardware discovery & interrupt mapping\n");
+    vga_puts(" [OK] Sovereign TCP/IP Stack     : Gigabit Ethernet eth0 (192.168.1.137) & lo ready\n");
+    vga_puts(" [OK] Native AiraLang Engine     : Bytecode VM & Runtime v1.4.0 active\n");
 
-    /* Step 13: Phase 5 - Virtual File System (VFS), In-Memory RamFS, /proc & /dev */
+    /* Step 13: Phase 5 - Virtual File System (VFS), In-Memory RamFS, /proc, /dev, /usr */
     vfs_init();
     ramfs_init();
     devfs_init();

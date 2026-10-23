@@ -191,10 +191,13 @@ qemu-system-x86_64 -kernel bin/airlys.elf -audiodev id=snd,driver=pa -soundhw pc
   - [x] `samples/`: Sample kernel worker thread and IPC pipe demonstration modules
   - [x] Canonical build files: `Kconfig`, `Kbuild`, `MAINTAINERS`, `Documentation/`, `LICENSES/`
 
-- [ ] **Phase 6: Advanced Network Protocols & AiraLang Bytecode Engine**
-  - [ ] Gigabit Ethernet Driver (VirtIO-Net / Intel e1000)
-  - [ ] Native TCP/IP, UDP, ICMP, DHCP network stack
-  - [ ] Embedded AiraLang bytecode interpreter running natively in Ring 0 / Ring 3
+- [x] **Phase 6: Advanced Network Protocols & AiraLang Bytecode Engine**
+  - [x] PCI Bus Controller driver & Gigabit Ethernet device enumeration (Intel 82540EM / VirtIO)
+  - [x] Native Freestanding TCP/IP, UDP, ICMP, DHCP & ARP network stack
+  - [x] Interactive `ping <ip>` utility with ICMP Echo Request/Reply RTT timing
+  - [x] DHCPDISCOVER client broadcasting for dynamic IP leases
+  - [x] Embedded AiraLang bytecode VM & script runner (`say`, `let`, `beep`, `sha256`)
+  - [x] Integrated `/home/user/demo.aira` script in RamFS & `airalang` shell command
 
 - [ ] **Phase 7: Unified Sovereign Desktop (GUI - Windows/Fluent Aesthetic), AiraStore & Standby AI**
   - [ ] High-Resolution VESA BIOS Extensions (VBE) & UEFI GOP Framebuffer Graphics Driver (1080p/4K)

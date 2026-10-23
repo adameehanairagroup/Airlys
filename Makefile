@@ -25,6 +25,7 @@ C_SRCS      := kernel/kmain.c \
                kernel/syscall.c \
                kernel/shell.c \
                kernel/printk.c \
+               kernel/airalang.c \
                mm/pmm.c \
                mm/vmm.c \
                mm/heap.c \
@@ -39,6 +40,7 @@ C_SRCS      := kernel/kmain.c \
                drivers/pic.c \
                drivers/rtc.c \
                drivers/serial.c \
+               drivers/pci.c \
                security/sentinel.c \
                lib/string.c \
                arch/x86_64/idt.c \
@@ -57,6 +59,11 @@ C_SRCS      := kernel/kmain.c \
                net/skbuff.c \
                net/netdev.c \
                net/arp.c \
+               net/ipv4.c \
+               net/icmp.c \
+               net/udp.c \
+               net/tcp.c \
+               net/dhcp.c \
                sound/core.c \
                sound/pcspkr.c \
                virt/virtio.c \
