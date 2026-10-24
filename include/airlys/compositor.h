@@ -40,6 +40,7 @@ void compositor_toggle_lock_screen(void);
 bool compositor_is_start_menu_open(void);
 bool compositor_is_lock_screen_open(void);
 
+void compositor_handle_mouse(int32_t x, int32_t y, bool left, bool right);
 void compositor_render_frame(void);
 
 #endif /* AIRLYS_COMPOSITOR_H */

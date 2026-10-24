@@ -33,6 +33,7 @@
 #include <airlys/vbe.h>
 #include <airlys/compositor.h>
 #include <airlys/apps.h>
+#include <airlys/mouse.h>
 #include <airlys/acpi.h>
 #include <airlys/neural.h>
 #include <airlys/airastore.h>
@@ -162,6 +163,10 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     /* Step 5: Initialize PS/2 Keyboard Driver */
     keyboard_init();
     vga_puts(" [OK] PS/2 Hardware Keyboard     : Scan Code Set 1 Driver active\n");
+
+    /* Step 5b: Initialize PS/2 Touchpad & Mouse Driver */
+    mouse_init();
+    vga_puts(" [OK] PS/2 Hardware Touchpad     : Hardware Cursor & Pointer active\n");
 
     /* Step 6: Phase 3 - Physical Memory Manager (PMM) */
     pmm_init(1024ULL * 1024 * 1024);

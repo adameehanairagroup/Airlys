@@ -27,6 +27,7 @@ C_SRCS      := kernel/kmain.c \
                kernel/printk.c \
                kernel/airalang.c \
                kernel/compositor.c \
+               kernel/wallpaper_logo.c \
                kernel/apps.c \
                kernel/neural.c \
                kernel/airastore.c \
@@ -40,6 +41,7 @@ C_SRCS      := kernel/kmain.c \
                fs/devfs.c \
                drivers/vga.c \
                drivers/keyboard.c \
+               drivers/mouse.c \
                drivers/timer.c \
                drivers/pic.c \
                drivers/rtc.c \
