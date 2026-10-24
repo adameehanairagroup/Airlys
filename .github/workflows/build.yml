@@ -29,8 +29,21 @@ jobs:
 
       - name: Build Airlys OS S1 Live ISO
         run: |
-          mkdir -p /mnt/work out bin
-          mkarchiso -v -w /mnt/work -o out ./profile
+          mkdir -p /mnt/work out bin build_profile
+          # 1. Copy official verified releng profile (includes all verified syslinux, efiboot, systemd-boot structures)
+          cp -r /usr/share/archiso/configs/releng/* build_profile/
+          
+          # 2. Append KDE Plasma 6 desktop & AMD hardware packages
+          cat profile/packages.x86_64 >> build_profile/packages.x86_64
+          
+          # 3. Overlay our Airlys OS S1 branding, wallpapers, autologin and configs
+          cp -r profile/airootfs/* build_profile/airootfs/
+          
+          # 4. Apply Airlys OS S1 profiledef
+          cp -f profile/profiledef.sh build_profile/profiledef.sh
+          
+          # 5. Build full production live bootable ISO
+          mkarchiso -v -w /mnt/work -o out build_profile/
           ls -lh out/
           cp -v out/*.iso bin/airlys.iso
           sha256sum bin/airlys.iso > bin/sha256sum.txt
