@@ -1,5 +1,6 @@
 #include <airlys/vga.h>
 #include <airlys/vbe.h>
+#include <airlys/serial.h>
 
 static size_t vga_row;
 static size_t vga_column;
@@ -78,6 +79,8 @@ void vga_clear(void) {
 }
 
 void vga_putchar(char c) {
+    serial_putchar(c);
+
     if (vbe_is_hardware_framebuffer()) {
         vbe_console_putchar(c, vga_to_rgb(vga_current_color));
     }

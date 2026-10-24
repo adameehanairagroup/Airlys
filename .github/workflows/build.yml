@@ -35,6 +35,54 @@ jobs:
           ./scripts/build_iso.sh
           ls -lh bin/
 
+      - name: Verify Live Boot in QEMU (Headless Test & Live Screen Capture)
+        run: |
+          sudo apt-get install -y qemu-system-x86 ovmf imagemagick
+          echo "=== Testing Live Boot in QEMU ==="
+          
+          qemu-system-x86_64 -cdrom bin/airlys.iso -m 2048 \
+            -serial file:serial.log \
+            -qmp unix:/tmp/qmp.sock,server,nowait \
+            -display none &
+          QEMU_PID=$!
+          
+          sleep 10
+          
+          python3 - << 'EOF'
+          import socket, time
+          try:
+              s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+              s.connect('/tmp/qmp.sock')
+              s.recv(1024)
+              s.sendall(b'{"execute":"qmp_capabilities"}\n')
+              s.recv(1024)
+              s.sendall(b'{"execute":"screendump","arguments":{"filename":"/tmp/screenshot.ppm"}}\n')
+              s.recv(1024)
+              s.close()
+              print(" [QMP] Screenshot dumped successfully!")
+          except Exception as e:
+              print(f" [QMP] Screenshot notice: {e}")
+          EOF
+          
+          kill -9 $QEMU_PID || true
+          
+          echo "=================================================="
+          echo "=== KERNEL BOOT SERIAL OUTPUT FROM QEMU RUN ==="
+          echo "=================================================="
+          cat serial.log || true
+          echo "=================================================="
+          
+          if [ -f /tmp/screenshot.ppm ]; then
+            convert /tmp/screenshot.ppm boot_screenshot.png
+            ls -lh boot_screenshot.png
+          fi
+          
+          grep -q "Kernel Main entered in 64-bit Long Mode" serial.log || {
+            echo "ERROR: Kernel did not reach 64-bit Long Mode!"
+            exit 1
+          }
+          echo " [SUCCESS] Kernel booted and executed in 64-bit Long Mode verified!"
+
       - name: Upload Bootable Airlys ISO & Kernel Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -42,4 +90,6 @@ jobs:
           path: |
             bin/airlys.iso
             bin/airlys.elf
+            serial.log
+            boot_screenshot.png
           retention-days: 14

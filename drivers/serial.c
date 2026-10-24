@@ -33,6 +33,12 @@ static inline bool is_transmit_empty(void) {
 void serial_putchar(char c) {
     if (!s_com1_present) return;
 
+    if (c == '\n') {
+        uint32_t to = 50000;
+        while (!is_transmit_empty() && --to > 0) {}
+        if (to > 0) outb(COM1_PORT, '\r');
+    }
+
     uint32_t timeout = 50000;
     while (!is_transmit_empty() && --timeout > 0) {}
     if (timeout > 0) {
@@ -43,9 +49,6 @@ void serial_putchar(char c) {
 void serial_puts(const char* str) {
     if (!s_com1_present || !str) return;
     while (*str) {
-        if (*str == '\n') {
-            serial_putchar('\r');
-        }
         serial_putchar(*str++);
     }
 }

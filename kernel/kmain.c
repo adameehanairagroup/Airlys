@@ -45,7 +45,11 @@ static void aira_sentinel_task(void) {
 }
 
 void kernel_main(uint64_t magic, uint64_t addr) {
-    /* Step 0: Extract Hardware Framebuffer immediately (UEFI GOP / VBE Tag 16 / MB1) */
+    /* Step 0: Initialize COM1 serial port for real-time diagnostic output */
+    serial_init();
+    serial_puts("\n[AIRLYS SOVEREIGN OS] Kernel Main entered in 64-bit Long Mode!\n");
+
+    /* Step 0b: Extract Hardware Framebuffer immediately (UEFI GOP / VBE Tag 16 / MB1) */
     if (magic == 0x36D76289 && addr != 0) {
         uint32_t total_size = *(volatile uint32_t*)addr;
         uint8_t* tag_ptr = (uint8_t*)(addr + 8);
