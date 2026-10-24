@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build-iso:
-    name: Build Airlys OS S1 Live ISO (KDE Plasma 6)
+    name: Build Airlys OS S1 Live ISO
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
@@ -77,7 +77,7 @@ jobs:
             echo "ISO is under 2GB limit! Uploading direct single airlys.iso..."
             gh release create v1.0.0-s1 bin/airlys.iso bin/sha256sum.txt \
               --title "Airlys OS S1 - Official Production Release" \
-              --notes "Airlys OS S1 (KDE Plasma 6 Desktop + Linux Zen 6.x) engineered by Er. Adam Eehan (Aira Group of Technology) & Aira 3 Ultra. Direct bootable ISO for Acer Nitro V 15 & modern UEFI PCs." \
+              --notes "Airlys OS S1 Official Production Release engineered by Er. Adam Eehan (Founder & CEO, Aira Group of Technology) & Aira 3 Ultra. Direct bootable ISO for Acer Nitro V 15 & modern UEFI PCs." \
               --repo ${{ github.repository }}
           else
             echo "ISO exceeds 2GB limit ($ISO_SIZE bytes), splitting into parts for GitHub Releases..."
@@ -86,6 +86,6 @@ jobs:
             cd ..
             gh release create v1.0.0-s1 bin/airlys.iso.part-* bin/sha256sum.txt \
               --title "Airlys OS S1 - Official Production Release" \
-              --notes "Airlys OS S1 (KDE Plasma 6 Desktop + Linux Zen 6.x) engineered by Er. Adam Eehan (Aira Group of Technology) & Aira 3 Ultra." \
+              --notes "Airlys OS S1 Official Production Release engineered by Er. Adam Eehan (Founder & CEO, Aira Group of Technology) & Aira 3 Ultra. Direct bootable ISO for Acer Nitro V 15 & modern UEFI PCs." \
               --repo ${{ github.repository }}
           fi

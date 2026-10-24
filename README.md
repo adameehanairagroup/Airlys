@@ -20,8 +20,8 @@
 <br/>
 
 [![Architecture](https://img.shields.io/badge/Architecture-x86__64-00f2fe?style=for-the-badge&logo=cpu&logoColor=black)](#)
-[![Kernel](https://img.shields.io/badge/Kernel-Linux_Zen_6.x-00C853?style=for-the-badge&logo=linux&logoColor=white)](#)
-[![Desktop](https://img.shields.io/badge/Desktop-KDE_Plasma_6-1D99F3?style=for-the-badge&logo=kde&logoColor=white)](#)
+[![Kernel](https://img.shields.io/badge/Kernel-Airlys_Zen_Core_v6.x-00C853?style=for-the-badge)](#)
+[![Desktop](https://img.shields.io/badge/Desktop-Airlys_Glass_Engine-1D99F3?style=for-the-badge)](#)
 [![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen?style=for-the-badge&logo=checkmarx&logoColor=white)](#)
 [![Founder](https://img.shields.io/badge/Founder_&_CEO-Er._Adam_Eehan-00f2fe?style=for-the-badge&logo=github&logoColor=black)](https://github.com/adameehanairagroup)
 
@@ -43,12 +43,12 @@
 
 ## 🚀 Key Features
 
-### 1. The World's Most Beautiful Desktop (KDE Plasma 6)
-* **Frosted Acrylic Glass Blur**: GPU-accelerated Wayland KWin compositing with real-time blur and depth.
+### 1. Airlys Glass Desktop Environment
+* **Frosted Acrylic Glass Blur**: GPU-accelerated compositing with real-time blur and depth.
 * **Modern Floating Dock**: Translucent taskbar with animated icon scaling, live window previews, and unified Action Center.
 * **Authentic Airlys Artwork**: Full-frame 1080p edge-to-edge official Airlys Falcon Logo wallpaper.
 
-### 2. Linux Zen 6.x High-Performance Engine
+### 2. Airlys Zen Core High-Performance Engine (v6.x)
 * **Zen 3+ CPU Optimizations**: Low-latency preemptive schedulers tuned for AMD Ryzen 7 7735HS (8 Cores, 16 Threads @ 4.75 GHz).
 * **Hardware Plug-and-Play**: Full USB 3.x xHCI bus power, MediaTek MT7922 / AMD RZ616 Wi-Fi 6E, Bluetooth 5.3, Realtek HD Audio, and I2C HID multi-touch precision trackpad.
 * **Dual-GPU Switching**: Seamless hybrid graphics management between power-saving AMD Radeon 680M and high-octane NVIDIA GeForce RTX.
@@ -87,7 +87,7 @@ Download the latest bootable ISO from the [Releases](https://github.com/adameeha
   ```
 
 ### 3. Boot & Enjoy
-Plug the USB into your PC, power on, tap `F12` (or `F2` for BIOS), and select **Airlys OS S1**. SDDM will automatically load you into the live session!
+Plug the USB into your PC, power on, tap `F12` (or `F2` for BIOS), and select **Airlys OS S1**. The system will automatically load you into the live session!
 
 ---
 
