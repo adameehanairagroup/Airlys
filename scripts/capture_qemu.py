@@ -4,7 +4,7 @@ import time
 import socket
 import json
 
-def qmp_send_enter(sock_path):
+def qmp_send_keys(sock_path, key_names):
     try:
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.settimeout(10)
@@ -12,13 +12,15 @@ def qmp_send_enter(sock_path):
         s.recv(4096)
         s.sendall(json.dumps({"execute": "qmp_capabilities"}).encode() + b"\n")
         s.recv(4096)
-        cmd = json.dumps({"execute": "send-key", "arguments": {"keys": [{"type": "qcode", "data": "ret"}]}})
-        s.sendall(cmd.encode() + b"\n")
-        s.recv(4096)
+        for k in key_names:
+            cmd = json.dumps({"execute": "send-key", "arguments": {"keys": [{"type": "qcode", "data": k}]}})
+            s.sendall(cmd.encode() + b"\n")
+            s.recv(4096)
+            time.sleep(0.1)
         s.close()
-        print("Sent Enter key to boot menu successfully.")
+        print(f"Sent keys {key_names} successfully.")
     except Exception as e:
-        print(f"Failed to send Enter key: {e}")
+        print(f"Failed to send keys: {e}")
 
 def qmp_screendump(sock_path, out_file):
     try:
@@ -43,6 +45,10 @@ if __name__ == "__main__":
     sock = sys.argv[1]
     arg = sys.argv[2]
     if arg == "enter":
-        qmp_send_enter(sock)
+        qmp_send_keys(sock, ["ret"])
+    elif arg == "login":
+        qmp_send_keys(sock, ["a", "i", "r", "l", "y", "s", "ret"])
+    elif arg == "start" or arg == "super":
+        qmp_send_keys(sock, ["meta_l"])
     else:
         qmp_screendump(sock, arg)

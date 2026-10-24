@@ -25,7 +25,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-system-x86 imagemagick
-          # Unlock KVM hardware acceleration device permissions
           if [ -e /dev/kvm ]; then
             sudo chmod 666 /dev/kvm
             echo "Successfully enabled /dev/kvm hardware virtualization!"
@@ -78,16 +77,24 @@ jobs:
           sleep 30
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/02_kernel_boot.ppm
           
-          # Capture 3: Desktop Environment Loading (at 85s)
-          sleep 50
+          # Log into desktop session if on SDDM prompt (at 65s)
+          sleep 30
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock login
+          
+          # Capture 3: Desktop Environment with Wallpaper & Dock (at 95s)
+          sleep 30
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/03_airlys_desktop.ppm
           
-          # Capture 4: Fully Settled Desktop with Wallpaper & Dock (at 145s)
-          sleep 60
-          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/04_airlys_desktop_settled.ppm
+          # Send Super / Windows key to open KDE Start Menu (at 110s)
+          sleep 15
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock start
           
-          # Capture 5: Final S1 Desktop with Blur and Dock (at 190s)
-          sleep 45
+          # Capture 4: Full Desktop WITH Start Menu Open & Apps (at 125s)
+          sleep 15
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/04_airlys_start_menu.ppm
+          
+          # Capture 5: Final Settled System State (at 155s)
+          sleep 30
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/05_airlys_desktop_final.ppm
           
           kill -9 $QEMU_PID || true
