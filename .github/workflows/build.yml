@@ -17,7 +17,7 @@ jobs:
       - name: Install LLVM, Clang & Bootloader Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang lld llvm make file grub-pc-bin grub-common xorriso mtools
+          sudo apt-get install -y clang lld llvm make file grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools dosfstools
 
       - name: Build Airlys Kernel
         run: |
@@ -29,24 +29,35 @@ jobs:
           file bin/airlys.elf
           llvm-readelf -h bin/airlys.elf
 
-      - name: Build Bootable Live ISO (GRUB2)
+      - name: Build Bootable Live ISO (Dual UEFI + BIOS Hybrid GRUB2)
         run: |
           chmod +x scripts/build_iso.sh
           ./scripts/build_iso.sh
           ls -lh bin/
+          file bin/airlys.iso
 
-      - name: Verify Live Boot in QEMU (Headless Test & Live Screen Capture)
+      - name: Verify Live Boot in QEMU (Pure UEFI OVMF & Live Screen Capture)
         run: |
           sudo apt-get install -y qemu-system-x86 ovmf imagemagick
-          echo "=== Testing Live Boot in QEMU ==="
+          echo "=== 1. Testing Pure UEFI Boot with OVMF Firmware ==="
           
-          qemu-system-x86_64 -cdrom bin/airlys.iso -m 2048 \
+          # Find OVMF firmware
+          OVMF_PATH=""
+          if [ -f /usr/share/ovmf/OVMF.fd ]; then
+            OVMF_PATH="/usr/share/ovmf/OVMF.fd"
+          elif [ -f /usr/share/OVMF/OVMF_CODE.fd ]; then
+            OVMF_PATH="/usr/share/OVMF/OVMF_CODE.fd"
+          fi
+          echo "Using OVMF: $OVMF_PATH"
+          
+          # Launch QEMU with UEFI firmware, serial capture, and QMP
+          qemu-system-x86_64 ${OVMF_PATH:+-bios "$OVMF_PATH"} -cdrom bin/airlys.iso -m 2048 \
             -serial file:serial.log \
             -qmp unix:/tmp/qmp.sock,server,nowait \
             -display none &
           QEMU_PID=$!
           
-          sleep 10
+          sleep 12
           
           python3 - << 'EOF'
           import socket, time
@@ -67,7 +78,7 @@ jobs:
           kill -9 $QEMU_PID || true
           
           echo "=================================================="
-          echo "=== KERNEL BOOT SERIAL OUTPUT FROM QEMU RUN ==="
+          echo "=== KERNEL BOOT SERIAL OUTPUT FROM UEFI RUN ==="
           echo "=================================================="
           cat serial.log || true
           echo "=================================================="
@@ -78,10 +89,10 @@ jobs:
           fi
           
           grep -q "Kernel Main entered in 64-bit Long Mode" serial.log || {
-            echo "ERROR: Kernel did not reach 64-bit Long Mode!"
+            echo "ERROR: Kernel did not reach 64-bit Long Mode under UEFI!"
             exit 1
           }
-          echo " [SUCCESS] Kernel booted and executed in 64-bit Long Mode verified!"
+          echo " [SUCCESS] Kernel booted and executed in Pure 64-bit UEFI Long Mode verified!"
 
       - name: Upload Bootable Airlys ISO & Kernel Artifacts
         uses: actions/upload-artifact@v4
