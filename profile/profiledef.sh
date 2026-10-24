@@ -17,6 +17,7 @@ airootfs_image_type="squashfs"
 airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M')
 file_permissions=(
   ["/etc/shadow"]="0:0:400"
+  ["/etc/pam.d/sddm-autologin"]="0:0:644"
   ["/etc/sudoers.d/airlys"]="0:0:440"
   ["/usr/local/bin/airlys-firstrun.sh"]="0:0:755"
   ["/root"]="0:0:750"

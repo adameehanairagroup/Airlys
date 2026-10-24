@@ -62,7 +62,19 @@ jobs:
           # 6. Overlay our Airlys OS S1 branding, wallpapers, autologin and configs
           cp -r profile/airootfs/* build_profile/airootfs/
           
-          # 7. Apply Airlys OS S1 profiledef (xz -Xbcj x86 compression)
+          # 7. Pre-create airlys user with passwordless PAM autologin directly in airootfs
+          echo "airlys:x:1000:1000:Airlys User:/home/airlys:/bin/bash" >> build_profile/airootfs/etc/passwd
+          echo "airlys::19000:0:99999:7:::" >> build_profile/airootfs/etc/shadow
+          echo "airlys:x:1000:" >> build_profile/airootfs/etc/group
+          echo "wheel:x:998:airlys" >> build_profile/airootfs/etc/group
+          echo "video:x:985:airlys" >> build_profile/airootfs/etc/group
+          echo "audio:x:986:airlys" >> build_profile/airootfs/etc/group
+          echo "input:x:987:airlys" >> build_profile/airootfs/etc/group
+          mkdir -p build_profile/airootfs/home/airlys/.config
+          cp -r build_profile/airootfs/etc/skel/. build_profile/airootfs/home/airlys/ || true
+          chown -R 1000:1000 build_profile/airootfs/home/airlys || true
+          
+          # 8. Apply Airlys OS S1 profiledef (xz -Xbcj x86 compression)
           cp -f profile/profiledef.sh build_profile/profiledef.sh
           
           # 6. Build full production live bootable ISO
