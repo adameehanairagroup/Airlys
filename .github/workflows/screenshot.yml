@@ -92,11 +92,22 @@ jobs:
           # Capture 4: Full Desktop WITH Start Menu Open & Apps (at 125s)
           sleep 15
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/04_airlys_start_menu.ppm
-          
-          # Capture 5: Final Settled System State (at 155s)
-          sleep 30
+
+          # Close Start Menu
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock esc
+          sleep 2
+
+          # Launch Konsole & run fastfetch to show the authentic OS About specs
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock about
+          sleep 6
+
+          # Capture 5: Desktop with About System / Fastfetch Information
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/06_airlys_about_system.ppm
+
+          # Capture 6: Final Settled System State (at 180s)
+          sleep 5
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/05_airlys_desktop_final.ppm
-          
+
           kill -9 $QEMU_PID || true
           
           echo "Converting captures to PNG..."
