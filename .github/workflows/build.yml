@@ -37,7 +37,7 @@ jobs:
           cp -r /usr/share/archiso/configs/releng/* build_profile/
           
           # 2. Prune bloated rescue / VM guest agent packages from releng (Nitro V 15 is a physical gaming laptop)
-          sed -i -E '/^(cloud-init|open-vm-tools|virtualbox-guest-utils-nox|hyperv|qemu-guest-agent|clonezilla|partclone|partimage|testdisk|espeakup|brltty|man-pages|man-db|irssi|lynx|darkhttpd|ddrescue|refind|livecd-sounds|grml-zsh-config)$/d' build_profile/packages.x86_64
+          sed -i -E '/^(cloud-init|open-vm-tools|virtualbox-guest-utils-nox|hyperv|qemu-guest-agent|clonezilla|partclone|partimage|testdisk|espeakup|brltty|man-pages|man-db|irssi|lynx|darkhttpd|ddrescue|refind|livecd-sounds|grml-zsh-config|archinstall|nmap|tcpdump|openvpn|openconnect|lftp|modemmanager|usb_modeswitch|usbmuxd|bcachefs-tools|f2fs-tools|nilfs-utils|jfsutils|udftools|dmraid|tpm2-tools|tpm2-tss|pcsclite|openpgp-card-tools|sequoia-sq|ppp|pptpclient|wvdial|xl2tpd)$/d' build_profile/packages.x86_64
           
           # 3. Append KDE Plasma 6 desktop & AMD hardware packages
           cat profile/packages.x86_64 >> build_profile/packages.x86_64
@@ -70,11 +70,14 @@ jobs:
           ISO_SIZE=$(stat -c%s bin/airlys.iso)
           echo "ISO size is $ISO_SIZE bytes"
           
+          # Delete previous release and tag if it exists so we recreate it cleanly
+          gh release delete v1.0.0-s1 --yes --cleanup-tag --repo ${{ github.repository }} || true
+          
           if [ "$ISO_SIZE" -lt 2100000000 ]; then
-            echo "ISO is under 2GB limit, uploading direct ISO..."
+            echo "ISO is under 2GB limit! Uploading direct single airlys.iso..."
             gh release create v1.0.0-s1 bin/airlys.iso bin/sha256sum.txt \
               --title "Airlys OS S1 - Official Production Release" \
-              --notes "Airlys OS S1 (KDE Plasma 6 Desktop + Linux Zen 6.x) engineered by Er. Adam Eehan (Aira Group of Technology) & Aira 3 Ultra." \
+              --notes "Airlys OS S1 (KDE Plasma 6 Desktop + Linux Zen 6.x) engineered by Er. Adam Eehan (Aira Group of Technology) & Aira 3 Ultra. Direct bootable ISO for Acer Nitro V 15 & modern UEFI PCs." \
               --repo ${{ github.repository }}
           else
             echo "ISO exceeds 2GB limit ($ISO_SIZE bytes), splitting into parts for GitHub Releases..."
