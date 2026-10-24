@@ -1,5 +1,7 @@
 NAME="Airlys OS"
 PRETTY_NAME="Airlys OS S1"
+VERSION="S1 Flagship Edition"
+VERSION_ID="1.0.0-s1"
 ID=airlys
 ID_LIKE=arch
 BUILD_ID=s1
@@ -9,3 +11,5 @@ DOCUMENTATION_URL="https://github.com/adameehanairagroup/AirlysOS"
 SUPPORT_URL="https://github.com/adameehanairagroup/AirlysOS/issues"
 BUG_REPORT_URL="https://github.com/adameehanairagroup/AirlysOS/issues"
 LOGO=airlys-logo
+VENDOR_NAME="Aira Group of Technology"
+VENDOR_URL="https://github.com/adameehanairagroup"

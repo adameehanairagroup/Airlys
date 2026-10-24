@@ -93,15 +93,11 @@ jobs:
           sleep 15
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/04_airlys_start_menu.ppm
 
-          # Close Start Menu
-          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock esc
-          sleep 2
-
-          # Launch Konsole & run fastfetch to show the authentic OS About specs
+          # With Start Menu open, search and launch authentic GUI "About this System"
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock about
-          sleep 6
+          sleep 10
 
-          # Capture 5: Desktop with About System / Fastfetch Information
+          # Capture 5: Desktop with authentic "About this System" GUI Window
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/06_airlys_about_system.ppm
 
           # Capture 6: Final Settled System State (at 180s)

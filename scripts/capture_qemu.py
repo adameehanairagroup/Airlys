@@ -59,23 +59,28 @@ def qmp_type_string(sock_path, text):
     except Exception as e:
         print(f"Failed to type string: {e}")
 
-def qmp_open_about_terminal(sock_path):
+def qmp_open_about_window(sock_path):
     try:
-        print("Opening Application / Terminal for About System...")
-        # 1. First try KRunner (Alt+F2)
-        qmp_send_combo(sock_path, ["alt", "f2"])
+        print("Launching 'About this System' GUI from Start Menu...")
+        # Since Start Menu is open, type 'about' and hit Enter
+        for ch in "about":
+            qmp_send_keys(sock_path, [ch])
+            time.sleep(0.12)
+        time.sleep(1.0)
+        qmp_send_keys(sock_path, ["ret"])
+        time.sleep(4.0)
+
+        # Backup attempt via KRunner (Alt+Space)
+        print("Backup: Attempting KRunner launch for kinfocenter...")
+        qmp_send_combo(sock_path, ["alt", "spc"])
         time.sleep(1.5)
-        qmp_type_string(sock_path, "konsole\n")
-        time.sleep(4)
-
-        # 2. Also try standard shortcut Ctrl+Alt+T
-        qmp_send_combo(sock_path, ["ctrl", "alt", "t"])
-        time.sleep(3)
-
-        # 3. Type fastfetch in Konsole terminal
-        qmp_type_string(sock_path, "fastfetch\n")
-        time.sleep(4)
-        print("Executed fastfetch command in live terminal.")
+        for ch in "kinfocenter":
+            qmp_send_keys(sock_path, [ch])
+            time.sleep(0.1)
+        time.sleep(0.5)
+        qmp_send_keys(sock_path, ["ret"])
+        time.sleep(4.0)
+        print("Finished launching About this System GUI.")
     except Exception as e:
         print(f"Failed to open About system: {e}")
 
@@ -102,7 +107,7 @@ if __name__ == "__main__":
     elif arg == "esc":
         qmp_send_keys(sock, ["esc"])
     elif arg == "about":
-        qmp_open_about_terminal(sock)
+        qmp_open_about_window(sock)
     else:
         qmp_screendump(sock, arg)
 
