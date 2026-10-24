@@ -15,13 +15,15 @@
 ```
 
 ### ⚡ The Modern, High-Performance Production Operating System
-**Engineered by Aira Group of Technology**
+**Engineered by Aira Group of Technology**  
+📍 **Proudly Developed in Thiruvananthapuram, Kerala, India 🇮🇳**
 
 <br/>
 
 [![Architecture](https://img.shields.io/badge/Architecture-x86__64-00f2fe?style=for-the-badge&logo=cpu&logoColor=black)](#)
 [![Kernel](https://img.shields.io/badge/Kernel-Airlys_Zen_Core_v6.x-00C853?style=for-the-badge)](#)
 [![Desktop](https://img.shields.io/badge/Desktop-Airlys_Glass_Engine-1D99F3?style=for-the-badge)](#)
+[![Built in Kerala](https://img.shields.io/badge/Proudly_Built_In-Kerala%2C_India_%F0%9F%87%AE%F0%9F%87%B3-FF9933?style=for-the-badge)](#)
 [![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen?style=for-the-badge&logo=checkmarx&logoColor=white)](#)
 [![Founder](https://img.shields.io/badge/Founder_&_CEO-Er._Adam_Eehan-00f2fe?style=for-the-badge&logo=github&logoColor=black)](https://github.com/adameehanairagroup)
 
@@ -91,11 +93,17 @@ Plug the USB into your PC, power on, tap `F12` (or `F2` for BIOS), and select **
 
 ---
 
-## 🏛️ Governance & Authorship
+## 🏛️ Vision & Authorship
+
+> *"The world often says that India never produces original foundational technology — that we are merely consumers and users of Western corporate software. But among India's 28 states stands God's Own Country: Kerala. A land of educated, skilled, forward-thinking, and fiercely ambitious minds. Airlys OS was not imported; it was forged with sovereign passion and engineering right here on our soil. Proudly built in Kerala, for the world."*  
+> — **Er. Adam Eehan**, Founder & CEO, *Aira Group of Technology*
+
+<br/>
 
 Airlys OS S1 is an open-source milestone engineered and published by:
 
 * **Er. Adam Eehan** — Founder, Chief Executive Officer & Lead Architect, *Aira Group of Technology*
 * **Aira 3 Ultra** — Sovereign AI Pair Programmer & Co-Pilot
+* **Headquarters**: Thiruvananthapuram, Kerala, India 🇮🇳
 
 Copyright © 2026 Aira Group of Technology. All rights reserved.
