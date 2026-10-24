@@ -21,10 +21,17 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v4
 
-      - name: Install QEMU & ImageMagick
+      - name: Install QEMU & Enable KVM Virtualization
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-system-x86 imagemagick
+          # Unlock KVM hardware acceleration device permissions
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            echo "Successfully enabled /dev/kvm hardware virtualization!"
+          else
+            echo "Warning: /dev/kvm node not found."
+          fi
 
       - name: Download Built Airlys OS S1 ISO Artifact
         env:
@@ -78,6 +85,10 @@ jobs:
           # Capture 4: Fully Settled Desktop with Wallpaper & Dock (at 145s)
           sleep 60
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/04_airlys_desktop_settled.ppm
+          
+          # Capture 5: Final S1 Desktop with Blur and Dock (at 190s)
+          sleep 45
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/05_airlys_desktop_final.ppm
           
           kill -9 $QEMU_PID || true
           
