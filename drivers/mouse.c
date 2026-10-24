@@ -38,15 +38,28 @@ static uint8_t mouse_read(void) {
     return inb(MOUSE_PORT_DATA);
 }
 
-static void mouse_callback(registers_t* regs) {
-    (void)regs;
-    uint8_t status = inb(MOUSE_PORT_STATUS);
-    if (!(status & 0x01)) return; /* No data ready */
-    if (!(status & 0x20)) return; /* Not auxiliary (mouse) data */
+void mouse_move_relative(int32_t dx, int32_t dy) {
+    s_mouse_x += dx;
+    s_mouse_y += dy;
 
-    uint8_t b = inb(MOUSE_PORT_DATA);
+    /* Clamp within display bounds */
+    vbe_screen_t* scr = vbe_get_screen();
+    if (scr && scr->width > 0 && scr->height > 0) {
+        if (s_mouse_x < 0) s_mouse_x = 0;
+        if (s_mouse_x >= (int32_t)scr->width) s_mouse_x = (int32_t)scr->width - 1;
+        if (s_mouse_y < 0) s_mouse_y = 0;
+        if (s_mouse_y >= (int32_t)scr->height) s_mouse_y = (int32_t)scr->height - 1;
+    }
+}
 
-    /* Byte 0 alignment check: Bit 3 must always be 1 in PS/2 packet */
+void mouse_set_buttons(bool left, bool right) {
+    s_left_button = left;
+    s_right_button = right;
+    compositor_handle_mouse(s_mouse_x, s_mouse_y, s_left_button, s_right_button);
+}
+
+static void mouse_process_byte(uint8_t b) {
+    /* Byte 0 alignment check: Bit 3 must always be 1 in standard PS/2 packet */
     if (s_mouse_cycle == 0 && !(b & 0x08)) {
         return;
     }
@@ -67,23 +80,32 @@ static void mouse_callback(registers_t* regs) {
         /* Ignore overflow packets */
         if (flags & 0x40 || flags & 0x80) return;
 
-        s_mouse_x += dx;
-        s_mouse_y -= dy; /* PS/2 Y is positive up, screen Y is positive down */
-
-        /* Clamp within display bounds */
-        vbe_screen_t* scr = vbe_get_screen();
-        if (scr && scr->width > 0 && scr->height > 0) {
-            if (s_mouse_x < 0) s_mouse_x = 0;
-            if (s_mouse_x >= (int32_t)scr->width) s_mouse_x = (int32_t)scr->width - 1;
-            if (s_mouse_y < 0) s_mouse_y = 0;
-            if (s_mouse_y >= (int32_t)scr->height) s_mouse_y = (int32_t)scr->height - 1;
-        }
+        /* Invert dy because PS/2 Y is positive upwards, display Y is downwards */
+        mouse_move_relative(dx, -dy);
 
         s_left_button  = (flags & 0x01) != 0;
         s_right_button = (flags & 0x02) != 0;
 
-        /* Pass event to window compositor */
+        /* Dispatch event to window compositor */
         compositor_handle_mouse(s_mouse_x, s_mouse_y, s_left_button, s_right_button);
+    }
+}
+
+static void mouse_callback(registers_t* regs) {
+    (void)regs;
+    uint8_t status = inb(MOUSE_PORT_STATUS);
+    if (!(status & 0x01)) return; /* No data ready */
+
+    uint8_t b = inb(MOUSE_PORT_DATA);
+    mouse_process_byte(b);
+}
+
+/* Polling fallback for systems where IRQ 12 is intercepted by UEFI EC */
+void mouse_poll(void) {
+    uint32_t guard = 16;
+    while ((inb(MOUSE_PORT_STATUS) & 0x01) && guard-- > 0) {
+        uint8_t b = inb(MOUSE_PORT_DATA);
+        mouse_process_byte(b);
     }
 }
 

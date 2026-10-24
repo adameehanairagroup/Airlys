@@ -1,12 +1,14 @@
 #include <airlys/compositor.h>
 #include <airlys/apps.h>
-#include <airlys/vbe.h>
-#include <airlys/font.h>
-#include <airlys/string.h>
-#include <airlys/rtc.h>
-#include <airlys/printk.h>
 #include <airlys/mouse.h>
+#include <airlys/font.h>
+#include <airlys/rtc.h>
+#include <airlys/timer.h>
+#include <airlys/string.h>
+#include <airlys/acpi.h>
 #include <airlys/wallpaper_logo.h>
+
+#define COLOR_AMBER_GLOW     0xFFFFB800
 
 static window_t g_windows[MAX_WINDOWS];
 static uint32_t g_num_windows = 0;
@@ -14,26 +16,83 @@ static uint32_t g_active_window_id = 0;
 static bool     g_start_menu_open = false;
 static bool     g_lock_screen_open = false;
 
-/* Mouse Interaction State */
+/* Wallpaper state */
+static uint32_t g_active_wallpaper = WALLPAPER_DEFAULT_LOGO;
+
+/* Context Menu state */
+static bool     g_context_menu_open = false;
+static int32_t  g_context_x = 0;
+static int32_t  g_context_y = 0;
+
+/* Quick Settings (Action Center) state */
+static bool     g_quick_settings_open = false;
+static bool     g_qs_wifi = true;
+static bool     g_qs_bt = true;
+static bool     g_qs_airplane = false;
+static bool     g_qs_night_light = false;
+static bool     g_qs_battery_saver = false;
+static uint32_t g_qs_volume = 80;     /* 0 - 100 */
+static uint32_t g_qs_brightness = 100; /* 0 - 100 */
+
+/* Mouse interaction state */
 static bool     s_prev_left = false;
+static bool     s_prev_right = false;
 static uint32_t s_drag_win_id = 0;
 static int32_t  s_drag_ox = 0;
 static int32_t  s_drag_oy = 0;
+
+/* ---------------- Forward Declarations ---------------- */
+static void draw_window(window_t* win);
+static void draw_taskbar(vbe_screen_t* scr);
+static void draw_start_menu(vbe_screen_t* scr);
+static void draw_context_menu(vbe_screen_t* scr);
+static void draw_quick_settings(vbe_screen_t* scr);
+static void draw_mouse_cursor(vbe_screen_t* scr, int32_t mx, int32_t my);
+
+/* ---------------- Wallpaper API ---------------- */
+
+void compositor_set_wallpaper(uint32_t wallpaper_id) {
+    g_active_wallpaper = wallpaper_id % 4;
+}
+
+uint32_t compositor_get_wallpaper(void) {
+    return g_active_wallpaper;
+}
+
+void compositor_toggle_quick_settings(void) {
+    g_quick_settings_open = !g_quick_settings_open;
+    if (g_quick_settings_open) {
+        g_start_menu_open = false;
+        g_context_menu_open = false;
+    }
+}
+
+bool compositor_is_quick_settings_open(void) {
+    return g_quick_settings_open;
+}
+
+void compositor_close_context_menu(void) {
+    g_context_menu_open = false;
+    g_quick_settings_open = false;
+    g_start_menu_open = false;
+}
+
+/* ---------------- Compositor Lifecycle ---------------- */
 
 void compositor_init(void) {
     g_num_windows = 0;
     g_active_window_id = 0;
     g_start_menu_open = false;
     g_lock_screen_open = false;
+    g_context_menu_open = false;
+    g_quick_settings_open = false;
+    g_active_wallpaper = WALLPAPER_DEFAULT_LOGO;
     kmemset(g_windows, 0, sizeof(g_windows));
 
-    /* Initialize VBE 1024x768 @ 32bpp Framebuffer (or keep active hardware GOP) */
+    /* Initialize VBE backbuffer */
     vbe_init(1024, 768);
     vbe_allocate_backbuffer();
     apps_init();
-
-    /* Clean desktop startup: keep windows ready on dock without obstructing screen */
-    printk(KERN_INFO "compositor: Phase 7 Desktop Window Compositor & Acrylic Shell online\n");
 }
 
 window_t* compositor_create_window(const char* title, uint32_t x, uint32_t y, uint32_t w, uint32_t h, window_draw_fn draw) {
@@ -69,14 +128,14 @@ void compositor_close_window(uint32_t id) {
             if (g_num_windows > 0) g_num_windows--;
             if (g_active_window_id == id) {
                 g_active_window_id = 0;
-                for (int j = 0; j < MAX_WINDOWS; j++) {
+                for (int j = MAX_WINDOWS - 1; j >= 0; j--) {
                     if (g_windows[j].active && !g_windows[j].minimized) {
                         g_active_window_id = g_windows[j].id;
                         break;
                     }
                 }
             }
-            return;
+            break;
         }
     }
 }
@@ -87,6 +146,10 @@ void compositor_set_active_window(uint32_t id) {
 
 void compositor_toggle_start_menu(void) {
     g_start_menu_open = !g_start_menu_open;
+    if (g_start_menu_open) {
+        g_quick_settings_open = false;
+        g_context_menu_open = false;
+    }
 }
 
 void compositor_toggle_lock_screen(void) {
@@ -101,74 +164,62 @@ bool compositor_is_lock_screen_open(void) {
     return g_lock_screen_open;
 }
 
-/* ---------------- Graphical Vector Icons for Taskbar Dock ---------------- */
+/* ---------------- Dock Icon Vector Drawing ---------------- */
 
 static void draw_icon_start(uint32_t x, uint32_t y) {
-    /* Outer cyan glow ring */
-    vbe_draw_circle(x + 14, y + 14, 14, COLOR_CYAN_GLOW);
-    vbe_draw_circle(x + 14, y + 14, 13, 0xFF00384D);
-    vbe_fill_circle(x + 14, y + 14, 12, 0xFF031926);
-
-    /* Stylized Eagle Crest / 'A' Glyph */
-    vbe_draw_line(x + 14, y + 6, x + 8, y + 20, COLOR_CYAN_GLOW);
-    vbe_draw_line(x + 14, y + 6, x + 20, y + 20, COLOR_CYAN_GLOW);
-    vbe_draw_line(x + 10, y + 16, x + 18, y + 16, COLOR_CYAN_GLOW);
-    vbe_draw_line(x + 7, y + 13, x + 14, y + 9, 0xFF00C853);
-    vbe_draw_line(x + 21, y + 13, x + 14, y + 9, 0xFF00C853);
+    vbe_fill_rect(x, y, 28, 28, 0xFF0B1424);
+    vbe_draw_glow_rect(x, y, 28, 28, COLOR_CYAN_GLOW, COLOR_CYAN_DARK);
+    /* Sovereign Eagle / Falcon Vector Silhouette */
+    vbe_fill_circle(x + 14, y + 14, 8, 0xFF003344);
+    vbe_draw_line(x + 6,  y + 11, x + 14, y + 6,  COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 14, y + 6,  x + 22, y + 11, COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 6,  y + 11, x + 10, y + 18, COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 22, y + 11, x + 18, y + 18, COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 10, y + 18, x + 14, y + 23, COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 18, y + 18, x + 14, y + 23, COLOR_CYAN_GLOW);
 }
 
 static void draw_icon_terminal(uint32_t x, uint32_t y) {
-    vbe_fill_rect(x + 3, y + 3, 26, 22, 0xFF0B1424);
+    vbe_fill_rect(x + 3, y + 3, 26, 22, 0xFF0A0F1D);
     vbe_draw_rect(x + 3, y + 3, 26, 22, COLOR_BORDER_CYAN);
-    /* Prompt > */
-    vbe_draw_line(x + 8, y + 9, x + 13, y + 14, COLOR_CYAN_GLOW);
-    vbe_draw_line(x + 13, y + 14, x + 8, y + 19, COLOR_CYAN_GLOW);
-    /* Block cursor _ */
-    vbe_fill_rect(x + 16, y + 17, 7, 3, COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 7, y + 9, x + 12, y + 14, COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 12, y + 14, x + 7, y + 19, COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 15, y + 19, x + 23, y + 19, COLOR_GREEN_OK);
 }
 
 static void draw_icon_files(uint32_t x, uint32_t y) {
-    vbe_fill_rect(x + 3, y + 3, 26, 22, 0xFF081C30);
-    vbe_draw_rect(x + 3, y + 3, 26, 22, COLOR_BORDER_CYAN);
-    /* Folder tab */
-    vbe_fill_rect(x + 6, y + 7, 9, 3, 0xFF0284C7);
-    /* Folder back */
-    vbe_fill_rect(x + 6, y + 10, 20, 12, 0xFF0369A1);
-    /* Folder front flap */
-    vbe_fill_rect(x + 6, y + 13, 20, 9, 0xFF0284C7);
-    vbe_draw_line(x + 6, y + 13, x + 26, y + 13, COLOR_CYAN_GLOW);
+    vbe_fill_rect(x + 4, y + 8, 24, 18, 0xFF0D2137);
+    vbe_draw_rect(x + 4, y + 8, 24, 18, COLOR_BORDER_CYAN);
+    vbe_fill_rect(x + 4, y + 4, 12, 6, 0xFF005577);
+    vbe_draw_rect(x + 4, y + 4, 12, 6, COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 8, y + 13, x + 24, y + 13, COLOR_CYAN_GLOW);
+    vbe_draw_line(x + 8, y + 17, x + 20, y + 17, COLOR_LIGHT_GREY);
 }
 
 static void draw_icon_code(uint32_t x, uint32_t y) {
-    vbe_fill_rect(x + 3, y + 3, 26, 22, 0xFF141332);
-    vbe_draw_rect(x + 3, y + 3, 26, 22, COLOR_BORDER_CYAN);
-    /* < */
-    vbe_draw_line(x + 9, y + 9, x + 6, y + 14, COLOR_CYAN_GLOW);
-    vbe_draw_line(x + 6, y + 14, x + 9, y + 19, COLOR_CYAN_GLOW);
-    /* / */
-    vbe_draw_line(x + 18, y + 7, x + 14, y + 21, 0xFFFFB300);
-    /* > */
-    vbe_draw_line(x + 23, y + 9, x + 26, y + 14, COLOR_CYAN_GLOW);
-    vbe_draw_line(x + 26, y + 14, x + 23, y + 19, COLOR_CYAN_GLOW);
+    vbe_fill_rect(x + 3, y + 3, 26, 22, 0xFF140D26);
+    vbe_draw_rect(x + 3, y + 3, 26, 22, 0xFFA855F7);
+    vbe_draw_line(x + 9, y + 14, x + 6, y + 14, 0xFFA855F7);
+    vbe_draw_line(x + 9, y + 9, x + 6, y + 14, 0xFFA855F7);
+    vbe_draw_line(x + 6, y + 14, x + 9, y + 19, 0xFFA855F7);
+    vbe_draw_line(x + 17, y + 8, x + 13, y + 20, COLOR_WHITE);
+    vbe_draw_line(x + 21, y + 9, x + 24, y + 14, 0xFFA855F7);
+    vbe_draw_line(x + 24, y + 14, x + 21, y + 19, 0xFFA855F7);
 }
 
 static void draw_icon_store(uint32_t x, uint32_t y) {
     vbe_fill_rect(x + 3, y + 3, 26, 22, 0xFF0C2226);
     vbe_draw_rect(x + 3, y + 3, 26, 22, COLOR_BORDER_CYAN);
-    /* Shopping bag body */
     vbe_fill_rect(x + 7, y + 11, 18, 12, 0xFF0D9488);
-    /* Bag handle */
     vbe_draw_line(x + 12, y + 8, x + 14, y + 6, COLOR_CYAN_GLOW);
     vbe_draw_line(x + 14, y + 6, x + 18, y + 6, COLOR_CYAN_GLOW);
     vbe_draw_line(x + 18, y + 6, x + 20, y + 8, COLOR_CYAN_GLOW);
-    /* Center gem / diamond */
     vbe_fill_circle(x + 16, y + 16, 2, 0xFFFF007F);
 }
 
 static void draw_icon_taskmgr(uint32_t x, uint32_t y) {
     vbe_fill_rect(x + 3, y + 3, 26, 22, 0xFF071924);
     vbe_draw_rect(x + 3, y + 3, 26, 22, COLOR_BORDER_CYAN);
-    /* Pulse heartbeat graph */
     vbe_draw_line(x + 5, y + 14, x + 9, y + 14, 0xFF00FF88);
     vbe_draw_line(x + 9, y + 14, x + 12, y + 19, 0xFF00FF88);
     vbe_draw_line(x + 12, y + 19, x + 15, y + 8, 0xFF00FF88);
@@ -180,57 +231,87 @@ static void draw_icon_taskmgr(uint32_t x, uint32_t y) {
 static void draw_icon_search(uint32_t x, uint32_t y) {
     vbe_fill_rect(x + 3, y + 3, 26, 22, 0xFF10192A);
     vbe_draw_rect(x + 3, y + 3, 26, 22, COLOR_BORDER_CYAN);
-    /* Magnifying glass */
     vbe_draw_circle(x + 13, y + 12, 5, COLOR_CYAN_GLOW);
     vbe_draw_line(x + 17, y + 16, x + 23, y + 21, COLOR_CYAN_GLOW);
-    vbe_draw_line(x + 18, y + 16, x + 24, y + 21, COLOR_CYAN_GLOW);
 }
 
 static void draw_icon_settings(uint32_t x, uint32_t y) {
     vbe_fill_rect(x + 3, y + 3, 26, 22, 0xFF161F2E);
     vbe_draw_rect(x + 3, y + 3, 26, 22, COLOR_BORDER_CYAN);
-    /* Cyber gear hub */
     vbe_draw_circle(x + 16, y + 14, 4, COLOR_CYAN_GLOW);
-    /* Spokes */
     vbe_draw_line(x + 16, y + 7, x + 16, y + 10, COLOR_CYAN_GLOW);
     vbe_draw_line(x + 16, y + 18, x + 16, y + 21, COLOR_CYAN_GLOW);
     vbe_draw_line(x + 9, y + 14, x + 12, y + 14, COLOR_CYAN_GLOW);
     vbe_draw_line(x + 20, y + 14, x + 23, y + 14, COLOR_CYAN_GLOW);
 }
 
-/* ---------------- Desktop Wallpaper & Logo ---------------- */
+/* ---------------- Desktop Wallpaper Engine ---------------- */
 
 static void draw_desktop_wallpaper(vbe_screen_t* scr) {
-    /* 1. Deep matte cyber obsidian background */
-    vbe_fill_rect(0, 0, scr->width, scr->height, 0xFF060911);
+    uint32_t w = scr->width;
+    uint32_t h = scr->height;
 
-    /* 2. Center the exact Airlys Logo created by Er. Adam Eehan */
-    int32_t lx = ((int32_t)scr->width - WALLPAPER_LOGO_W) / 2;
-    int32_t ly = ((int32_t)scr->height - WALLPAPER_LOGO_H) / 2 - 40;
+    if (g_active_wallpaper == WALLPAPER_DEFAULT_LOGO) {
+        /* Theme 0: Authentic Sovereign Logo on Deep Obsidian */
+        vbe_fill_rect(0, 0, w, h, 0xFF060911);
 
-    for (int y = 0; y < WALLPAPER_LOGO_H; y++) {
-        int py = ly + y;
-        if (py < 0 || py >= (int)scr->height) continue;
-        uint32_t row_offset = y * WALLPAPER_LOGO_W;
-        for (int x = 0; x < WALLPAPER_LOGO_W; x++) {
-            int px = lx + x;
-            if (px < 0 || px >= (int)scr->width) continue;
-            uint32_t color = g_wallpaper_logo_pixels[row_offset + x];
-            vbe_putpixel(px, py, color);
+        /* Center the exact Airlys Logo created by Er. Adam Eehan */
+        int32_t lx = ((int32_t)w - WALLPAPER_LOGO_W) / 2;
+        int32_t ly = ((int32_t)h - WALLPAPER_LOGO_H) / 2 - 35;
+
+        for (int y = 0; y < WALLPAPER_LOGO_H; y++) {
+            int py = ly + y;
+            if (py < 0 || py >= (int)h) continue;
+            uint32_t row_offset = y * WALLPAPER_LOGO_W;
+            for (int x = 0; x < WALLPAPER_LOGO_W; x++) {
+                int px = lx + x;
+                if (px < 0 || px >= (int)w) continue;
+                uint32_t color = g_wallpaper_logo_pixels[row_offset + x];
+                vbe_putpixel(px, py, color);
+            }
         }
+
+        /* Sovereign Brand Title below logo */
+        uint32_t cx = w / 2;
+        uint32_t cy = (h / 2) - 35;
+        const char* brand = "AIRLYS SOVEREIGN OPERATING SYSTEM";
+        const char* sub   = "Engineered by Er. Adam Eehan & Sovereign AI Aira";
+        font_draw_string(cx - (kstrlen(brand) * 4), cy + 128, brand, COLOR_CYAN_GLOW);
+        font_draw_string(cx - (kstrlen(sub) * 4), cy + 148, sub, COLOR_LIGHT_GREY);
+
+    } else if (g_active_wallpaper == WALLPAPER_CYBER_AURORA) {
+        /* Theme 1: Vibrant Cyan-Purple Aurora Vector */
+        for (uint32_t y = 0; y < h; y += 4) {
+            uint32_t col = (y < h / 2) ? 0xFF0B1426 : 0xFF050810;
+            vbe_fill_rect(0, y, w, 4, col);
+        }
+        /* Aurora wave bands */
+        for (uint32_t x = 0; x < w; x += 16) {
+            vbe_draw_line(x, h / 2, x + 80, (h / 2) - 100, 0x1A00F2FE);
+            vbe_draw_line(x, (h / 2) + 60, x + 60, (h / 2) - 40, 0x12A855F7);
+        }
+        const char* title = "AIRLYS CYBER AURORA";
+        font_draw_string((w / 2) - (kstrlen(title) * 4), (h / 2) - 10, title, COLOR_CYAN_GLOW);
+
+    } else if (g_active_wallpaper == WALLPAPER_MINIMAL_DARK) {
+        /* Theme 2: Pure Matte Stealth Dark */
+        vbe_fill_rect(0, 0, w, h, 0xFF08090C);
+        vbe_draw_line((w / 2) - 150, h / 2, (w / 2) + 150, h / 2, COLOR_BORDER_CYAN);
+        const char* title = "A I R L Y S   S O V E R E I G N";
+        font_draw_string((w / 2) - (kstrlen(title) * 4), (h / 2) - 20, title, COLOR_WHITE);
+
+    } else if (g_active_wallpaper == WALLPAPER_EMERALD_MATRIX) {
+        /* Theme 3: Cyber Emerald Matrix */
+        vbe_fill_rect(0, 0, w, h, 0xFF030D08);
+        for (uint32_t y = 0; y < h; y += 40) {
+            vbe_draw_line(0, y, w, y, 0xFF082215);
+        }
+        for (uint32_t x = 0; x < w; x += 60) {
+            vbe_draw_line(x, 0, x, h, 0xFF082215);
+        }
+        const char* title = "AIRLYS EMERALD CORE";
+        font_draw_string((w / 2) - (kstrlen(title) * 4), (h / 2) - 10, title, COLOR_GREEN_OK);
     }
-
-    /* 3. Ambient neon glow around the logo */
-    uint32_t cx = scr->width / 2;
-    uint32_t cy = (scr->height / 2) - 40;
-    vbe_draw_circle(cx, cy, 210, 0x1500F2FE);
-    vbe_draw_circle(cx, cy, 211, 0x0D00F2FE);
-
-    /* 4. Sovereign Brand Title below logo */
-    const char* brand = "AIRLYS SOVEREIGN OPERATING SYSTEM";
-    const char* sub   = "Engineered by Er. Adam Eehan & Sovereign AI Aira";
-    font_draw_string(cx - (kstrlen(brand) * 4), cy + 125, brand, COLOR_CYAN_GLOW);
-    font_draw_string(cx - (kstrlen(sub) * 4), cy + 145, sub, COLOR_LIGHT_GREY);
 }
 
 /* ---------------- Window Drawing ---------------- */
@@ -238,35 +319,33 @@ static void draw_desktop_wallpaper(vbe_screen_t* scr) {
 static void draw_window(window_t* win) {
     if (!win->active || win->minimized) return;
 
-    /* 1. Frosted Acrylic Translucent Window Body */
+    /* Frosted Acrylic Window Body */
     vbe_fill_rect(win->x, win->y, win->w, win->h, COLOR_FROSTED_GLASS);
 
-    /* 2. Window Titlebar */
+    /* Window Titlebar */
     uint32_t tb_color = (win->id == g_active_window_id) ? COLOR_TITLEBAR_BG : 0xEE090E18;
     vbe_fill_rect(win->x, win->y, win->w, 26, tb_color);
-
-    /* Titlebar 1px separator */
     vbe_draw_line(win->x, win->y + 26, win->x + win->w, win->y + 26, COLOR_BORDER_CYAN);
 
     /* Title string */
     font_draw_string(win->x + 10, win->y + 5, win->title,
                      (win->id == g_active_window_id) ? COLOR_CYAN_GLOW : COLOR_LIGHT_GREY);
 
-    /* 3. Window Control Buttons (— □ ✕) */
+    /* Control Buttons (— [ ] ✕) */
     uint32_t btn_x = win->x + win->w - 60;
     font_draw_string(btn_x, win->y + 5, "-", COLOR_LIGHT_GREY);
     font_draw_string(btn_x + 18, win->y + 5, "[ ]", COLOR_LIGHT_GREY);
 
-    /* Close button with subtle crimson accent */
+    /* Close button */
     vbe_fill_rect(btn_x + 38, win->y + 3, 18, 20, 0x33FF3366);
     font_draw_string(btn_x + 43, win->y + 5, "x", COLOR_CRIMSON);
 
-    /* 4. Window Content Area */
+    /* Window Content */
     if (win->draw_content) {
         win->draw_content(win);
     }
 
-    /* 5. Outer 1px Electric Cyan Glow Border */
+    /* Glow Border */
     uint32_t border_color = (win->id == g_active_window_id) ? COLOR_CYAN_GLOW : COLOR_BORDER_CYAN;
     vbe_draw_glow_rect(win->x, win->y, win->w, win->h, border_color, COLOR_CYAN_DARK);
 }
@@ -279,16 +358,16 @@ static void draw_taskbar(vbe_screen_t* scr) {
     uint32_t dock_w = 480;
     uint32_t dock_x = (scr->width / 2) - (dock_w / 2);
 
-    /* Centered Floating Frosted Glass Dock */
+    /* Centered Floating Dock */
     vbe_fill_rect(dock_x, bar_y, dock_w, bar_h, COLOR_TASKBAR_BG);
     vbe_draw_glow_rect(dock_x, bar_y, dock_w, bar_h, COLOR_CYAN_GLOW, COLOR_CYAN_DARK);
 
-    /* Start Button with Eagle Crest */
+    /* Start Button */
     uint32_t sx = dock_x + 12;
     uint32_t sy = bar_y + 8;
     draw_icon_start(sx, sy);
 
-    /* Pinned App Icons (Vector Graphic Glyphs) */
+    /* Pinned App Icons */
     uint32_t app_x = sx + 44;
     for (int i = 0; i < 7; i++) {
         uint32_t tx = app_x + (i * 54);
@@ -302,15 +381,17 @@ static void draw_taskbar(vbe_screen_t* scr) {
         else if (i == 5) draw_icon_search(tx, ty);
         else if (i == 6) draw_icon_settings(tx, ty);
 
-        /* Indicator pill if app is running */
+        /* Indicator pill if app is open */
         bool is_open = false;
         bool is_active = false;
         for (int w = 0; w < MAX_WINDOWS; w++) {
             if (!g_windows[w].active) continue;
             if ((i == 0 && kstrcmp(g_windows[w].title, "airlys-term") == 0) ||
                 (i == 1 && kstrcmp(g_windows[w].title, "airlys-files") == 0) ||
+                (i == 2 && kstrcmp(g_windows[w].title, "aira-code") == 0) ||
                 (i == 4 && kstrcmp(g_windows[w].title, "Aira Task Manager") == 0) ||
-                (i == 5 && kstrncmp(g_windows[w].title, "Airlys", 6) == 0)) {
+                (i == 5 && kstrncmp(g_windows[w].title, "Airlys", 6) == 0) ||
+                (i == 6 && kstrcmp(g_windows[w].title, "airlys-settings") == 0)) {
                 is_open = true;
                 if (g_windows[w].id == g_active_window_id && !g_windows[w].minimized) {
                     is_active = true;
@@ -326,10 +407,10 @@ static void draw_taskbar(vbe_screen_t* scr) {
         }
     }
 
-    /* Right System Tray (Clock, Link, Volume, Shield) */
-    uint32_t tray_x = scr->width - 190;
-    vbe_fill_rect(tray_x, bar_y, 180, bar_h, COLOR_TASKBAR_BG);
-    vbe_draw_glow_rect(tray_x, bar_y, 180, bar_h, COLOR_BORDER_CYAN, COLOR_CYAN_DARK);
+    /* Right System Tray (Clock, Network, Battery, Volume) */
+    uint32_t tray_x = scr->width - 200;
+    vbe_fill_rect(tray_x, bar_y, 190, bar_h, COLOR_TASKBAR_BG);
+    vbe_draw_glow_rect(tray_x, bar_y, 190, bar_h, COLOR_BORDER_CYAN, COLOR_CYAN_DARK);
 
     rtc_time_t t = rtc_get_time();
     char clk_buf[16];
@@ -340,8 +421,8 @@ static void draw_taskbar(vbe_screen_t* scr) {
     clk_buf[4] = '0' + (t.minute % 10);
     clk_buf[5] = '\0';
 
-    font_draw_string(tray_x + 12, bar_y + 14, clk_buf, COLOR_CYAN_GLOW);
-    font_draw_string(tray_x + 60, bar_y + 14, "[eth0] [80%]", COLOR_LIGHT_GREY);
+    font_draw_string(tray_x + 10, bar_y + 14, clk_buf, COLOR_CYAN_GLOW);
+    font_draw_string(tray_x + 58, bar_y + 14, "[WiFi] [98% ⚡]", COLOR_WHITE);
 }
 
 /* ---------------- Start Menu ---------------- */
@@ -358,7 +439,7 @@ static void draw_start_menu(vbe_screen_t* scr) {
     vbe_fill_rect(sm_x, sm_y, sm_w, sm_h, 0xFA0B111E);
     vbe_draw_glow_rect(sm_x, sm_y, sm_w, sm_h, COLOR_CYAN_GLOW, COLOR_CYAN_DARK);
 
-    /* Top Search Bar */
+    /* Search Bar */
     uint32_t sb_x = sm_x + 20;
     uint32_t sb_y = sm_y + 18;
     vbe_fill_rect(sb_x, sb_y, sm_w - 40, 30, 0xFF070B14);
@@ -372,34 +453,20 @@ static void draw_start_menu(vbe_screen_t* scr) {
 
     const char* pinned[] = {
         "airlys-term", "airlys-files", "aira-code", "airastore",
-        "aira-taskmgr", "aira-sec", "aira-settings", "aira-calc"
+        "aira-taskmgr", "airlys-settings", "aira-search", "aira-calc"
     };
 
     for (int r = 0; r < 2; r++) {
         for (int c = 0; c < 4; c++) {
             uint32_t ax = sm_x + 20 + (c * 100);
-            uint32_t ay = py + (r * 40);
-            vbe_fill_rect(ax, ay, 90, 32, 0xFF0E1626);
-            vbe_draw_rect(ax, ay, 90, 32, COLOR_BORDER_CYAN);
-            font_draw_string(ax + 6, ay + 8, pinned[r * 4 + c], COLOR_WHITE);
+            uint32_t ay = py + (r * 70);
+            vbe_fill_rect(ax, ay, 90, 56, 0xFF0B1424);
+            vbe_draw_rect(ax, ay, 90, 56, COLOR_BORDER_CYAN);
+
+            int idx = r * 4 + c;
+            font_draw_string(ax + 10, ay + 12, "[App]", COLOR_CYAN_GLOW);
+            font_draw_string(ax + 8, ay + 32, pinned[idx], COLOR_WHITE);
         }
-    }
-
-    /* Recommended Section */
-    uint32_t ry = py + 95;
-    font_draw_string(sm_x + 20, ry, "Recommended & Recent Files", COLOR_CYAN_GLOW);
-    ry += 20;
-
-    const char* recents[] = {
-        "[PKG] demo.apkg     - Aira Package (Installed 2m ago)",
-        "[SRC] system.aira   - Sovereign Script (Edited today)",
-        "[DOC] covenant.txt  - The Open-Source Covenant"
-    };
-
-    for (int i = 0; i < 3; i++) {
-        vbe_fill_rect(sm_x + 20, ry, sm_w - 40, 22, 0xFF090E1A);
-        font_draw_string(sm_x + 28, ry + 3, recents[i], COLOR_LIGHT_GREY);
-        ry += 26;
     }
 
     /* Bottom User & Power Bar */
@@ -407,23 +474,170 @@ static void draw_start_menu(vbe_screen_t* scr) {
     vbe_fill_rect(sm_x, uy, sm_w, 38, 0xFF070B14);
     vbe_draw_line(sm_x, uy, sm_x + sm_w, uy, COLOR_BORDER_CYAN);
 
-    /* User Avatar & Name */
+    /* User Profile */
     vbe_draw_circle(sm_x + 25, uy + 19, 12, COLOR_CYAN_GLOW);
     font_draw_char(sm_x + 22, uy + 11, 'A', COLOR_CYAN_GLOW);
     font_draw_string(sm_x + 45, uy + 6, "Er. Adam Eehan", COLOR_WHITE);
     font_draw_string(sm_x + 45, uy + 20, "Founder & CEO, Aira Group", COLOR_GREEN_OK);
 
-    /* Power Button Glyph */
+    /* Power Button */
     font_draw_string(sm_x + sm_w - 70, uy + 11, "[Power]", COLOR_CRIMSON);
 }
 
-/* ---------------- Mouse Pointer Cursor ---------------- */
+/* ---------------- Right-Click Context Menu (LVGL Menu Widget) ---------------- */
+
+static void draw_context_menu(vbe_screen_t* scr) {
+    if (!g_context_menu_open) return;
+
+    uint32_t cm_w = 190;
+    uint32_t cm_h = 145;
+    int32_t  cm_x = g_context_x;
+    int32_t  cm_y = g_context_y;
+
+    /* Screen edge clamping */
+    if (cm_x + (int32_t)cm_w > (int32_t)scr->width) cm_x = scr->width - cm_w - 10;
+    if (cm_y + (int32_t)cm_h > (int32_t)scr->height - 50) cm_y = scr->height - 50 - cm_h;
+
+    /* Frosted Acrylic Card with Glow Border */
+    vbe_fill_rect(cm_x, cm_y, cm_w, cm_h, 0xFA0B111E);
+    vbe_draw_glow_rect(cm_x, cm_y, cm_w, cm_h, COLOR_CYAN_GLOW, COLOR_CYAN_DARK);
+
+    const char* items[] = {
+        "[W] Change Wallpaper",
+        "[*] Display & Settings",
+        "[>] Open Terminal",
+        "[#] Aira Task Manager",
+        "[~] Refresh Desktop"
+    };
+
+    int32_t iy = cm_y + 8;
+    int32_t mx = mouse_get_x();
+    int32_t my = mouse_get_y();
+
+    for (int i = 0; i < 5; i++) {
+        bool hover = (mx >= cm_x && mx <= cm_x + (int32_t)cm_w && my >= iy && my < iy + 25);
+        if (hover) {
+            vbe_fill_rect(cm_x + 4, iy, cm_w - 8, 24, 0xFF14243A);
+            vbe_draw_rect(cm_x + 4, iy, cm_w - 8, 24, COLOR_CYAN_GLOW);
+        }
+        font_draw_string(cm_x + 12, iy + 4, items[i], hover ? COLOR_CYAN_GLOW : COLOR_WHITE);
+        iy += 26;
+    }
+}
+
+/* ---------------- Action Center / Quick Settings (LVGL Controls) ---------------- */
+
+static void draw_quick_settings(vbe_screen_t* scr) {
+    if (!g_quick_settings_open) return;
+
+    uint32_t qs_w = 315;
+    uint32_t qs_h = 300;
+    uint32_t qs_x = scr->width - qs_w - 15;
+    uint32_t qs_y = scr->height - 60 - qs_h;
+
+    /* Frosted Acrylic Panel */
+    vbe_fill_rect(qs_x, qs_y, qs_w, qs_h, 0xFA0B111E);
+    vbe_draw_glow_rect(qs_x, qs_y, qs_w, qs_h, COLOR_CYAN_GLOW, COLOR_CYAN_DARK);
+
+    /* Header */
+    font_draw_string_glow(qs_x + 15, qs_y + 12, "Quick Settings", COLOR_WHITE, COLOR_CYAN_DARK);
+    font_draw_string(qs_x + qs_w - 120, qs_y + 12, "[98% ⚡ AC Online]", COLOR_GREEN_OK);
+    vbe_draw_line(qs_x, qs_y + 30, qs_x + qs_w, qs_y + 30, COLOR_BORDER_CYAN);
+
+    /* 5 LVGL Pill Toggles (Switches) */
+    const char* toggle_labels[] = { "Wi-Fi", "Bluetooth", "Airplane", "Night Light", "Battery Saver" };
+    bool toggle_states[] = { g_qs_wifi, g_qs_bt, g_qs_airplane, g_qs_night_light, g_qs_battery_saver };
+
+    for (int i = 0; i < 5; i++) {
+        uint32_t col = i % 2;
+        uint32_t row = i / 2;
+        uint32_t sw_x = qs_x + 15 + (col * 145);
+        uint32_t sw_y = qs_y + 40 + (row * 36);
+        uint32_t sw_w = 135;
+        uint32_t sw_h = 30;
+
+        bool active = toggle_states[i];
+        vbe_fill_rect(sw_x, sw_y, sw_w, sw_h, active ? 0xFF004455 : 0xFF0C1420);
+        vbe_draw_rect(sw_x, sw_y, sw_w, sw_h, active ? COLOR_CYAN_GLOW : COLOR_DARK_GREY);
+
+        /* Sliding knob */
+        uint32_t knob_x = active ? (sw_x + sw_w - 20) : (sw_x + 6);
+        vbe_fill_circle(knob_x + 6, sw_y + 15, 6, active ? COLOR_CYAN_GLOW : COLOR_LIGHT_GREY);
+
+        /* Label */
+        font_draw_string(sw_x + (active ? 8 : 22), sw_y + 7, toggle_labels[i], active ? COLOR_WHITE : COLOR_LIGHT_GREY);
+    }
+
+    /* Sliders Section */
+    uint32_t sy = qs_y + 160;
+    vbe_draw_line(qs_x, sy - 8, qs_x + qs_w, sy - 8, COLOR_BORDER_CYAN);
+
+    /* Volume Slider */
+    font_draw_string(qs_x + 15, sy, "Volume:", COLOR_WHITE);
+    char vol_str[8];
+    vol_str[0] = '0' + (g_qs_volume / 100);
+    vol_str[1] = '0' + ((g_qs_volume % 100) / 10);
+    vol_str[2] = '0' + (g_qs_volume % 10);
+    vol_str[3] = '%'; vol_str[4] = '\0';
+    font_draw_string(qs_x + 75, sy, vol_str, COLOR_CYAN_GLOW);
+
+    /* Slider track */
+    uint32_t sl_track_w = 180;
+    uint32_t sl_track_x = qs_x + 120;
+    vbe_fill_rect(sl_track_x, sy + 3, sl_track_w, 8, 0xFF0B1424);
+    vbe_draw_rect(sl_track_x, sy + 3, sl_track_w, 8, COLOR_BORDER_CYAN);
+    uint32_t sl_fill_w = (sl_track_w * g_qs_volume) / 100;
+    vbe_fill_rect(sl_track_x, sy + 3, sl_fill_w, 8, COLOR_CYAN_GLOW);
+    vbe_fill_circle(sl_track_x + sl_fill_w, sy + 7, 6, COLOR_WHITE);
+
+    /* Brightness Slider */
+    sy += 30;
+    font_draw_string(qs_x + 15, sy, "Brightness:", COLOR_WHITE);
+    char bri_str[8];
+    bri_str[0] = '0' + (g_qs_brightness / 100);
+    bri_str[1] = '0' + ((g_qs_brightness % 100) / 10);
+    bri_str[2] = '0' + (g_qs_brightness % 10);
+    bri_str[3] = '%'; bri_str[4] = '\0';
+    font_draw_string(qs_x + 100, sy, bri_str, COLOR_AMBER_GLOW);
+
+    uint32_t bri_track_x = qs_x + 145;
+    uint32_t bri_track_w = 155;
+    vbe_fill_rect(bri_track_x, sy + 3, bri_track_w, 8, 0xFF0B1424);
+    vbe_draw_rect(bri_track_x, sy + 3, bri_track_w, 8, COLOR_BORDER_CYAN);
+    uint32_t bri_fill_w = (bri_track_w * g_qs_brightness) / 100;
+    vbe_fill_rect(bri_track_x, sy + 3, bri_fill_w, 8, COLOR_AMBER_GLOW);
+    vbe_fill_circle(bri_track_x + bri_fill_w, sy + 7, 6, COLOR_WHITE);
+
+    /* Bottom Power Action Buttons */
+    sy += 40;
+    vbe_draw_line(qs_x, sy - 8, qs_x + qs_w, sy - 8, COLOR_BORDER_CYAN);
+
+    /* Sleep Button */
+    vbe_fill_rect(qs_x + 15, sy, 85, 24, 0xFF0D2137);
+    vbe_draw_rect(qs_x + 15, sy, 85, 24, COLOR_BORDER_CYAN);
+    font_draw_string(qs_x + 28, sy + 4, "[Sleep]", COLOR_CYAN_GLOW);
+
+    /* Restart Button */
+    vbe_fill_rect(qs_x + 115, sy, 85, 24, 0xFF14243A);
+    vbe_draw_rect(qs_x + 115, sy, 85, 24, COLOR_CYAN_GLOW);
+    font_draw_string(qs_x + 125, sy + 4, "[Restart]", COLOR_WHITE);
+
+    /* Shut Down Button */
+    vbe_fill_rect(qs_x + 215, sy, 85, 24, 0xFF44001A);
+    vbe_draw_rect(qs_x + 215, sy, 85, 24, COLOR_CRIMSON);
+    font_draw_string(qs_x + 223, sy + 4, "[Power]", COLOR_CRIMSON);
+}
+
+/* ---------------- Precision Aerodynamic White Cursor with Drop Shadow ---------------- */
 
 static void draw_mouse_cursor(vbe_screen_t* scr, int32_t mx, int32_t my) {
     if (!scr || !scr->back_buffer) return;
 
-    /* 14x20 Futuristic Cyber Neon Arrow Cursor */
-    static const uint16_t cursor_mask[20] = {
+    /*
+     * Sleek Windows 11 / macOS Precision Aerodynamic White Cursor
+     * Sharp tip at (0,0), white body, obsidian border, drop shadow.
+     */
+    static const uint16_t shape_mask[19] = {
         0b1000000000000000,
         0b1100000000000000,
         0b1110000000000000,
@@ -442,11 +656,11 @@ static void draw_mouse_cursor(vbe_screen_t* scr, int32_t mx, int32_t my) {
         0b0000000111000000,
         0b0000000011000000,
         0b0000000001000000,
-        0b0000000000000000,
         0b0000000000000000
     };
 
-    static const uint16_t cursor_border[20] = {
+    static const uint16_t border_mask[19] = {
+        0b1000000000000000,
         0b1100000000000000,
         0b1010000000000000,
         0b1001000000000000,
@@ -456,33 +670,46 @@ static void draw_mouse_cursor(vbe_screen_t* scr, int32_t mx, int32_t my) {
         0b1000000100000000,
         0b1000000010000000,
         0b1000000001000000,
-        0b1000000000100000,
-        0b1000111000000000,
-        0b1110100100000000,
-        0b0100010010000000,
-        0b0000001001000000,
+        0b1000011111100000,
+        0b1101001000000000,
+        0b1011000100000000,
+        0b0000100010000000,
+        0b0000010001000000,
+        0b0000001000100000,
         0b0000000100100000,
-        0b0000000010010000,
-        0b0000000001010000,
-        0b0000000000110000,
-        0b0000000000000000,
+        0b0000000011000000,
         0b0000000000000000
     };
 
-    for (int r = 0; r < 18; r++) {
+    /* Pass 1: Drop Shadow (+2, +2 offset) */
+    for (int r = 0; r < 19; r++) {
+        int py = my + r + 2;
+        if (py < 0 || py >= (int)scr->height) continue;
+        uint16_t row = shape_mask[r];
+        for (int c = 0; c < 16; c++) {
+            if ((row >> (15 - c)) & 1) {
+                int px = mx + c + 2;
+                if (px < 0 || px >= (int)scr->width) continue;
+                vbe_putpixel(px, py, 0xFF020408);
+            }
+        }
+    }
+
+    /* Pass 2: White Body & Crisp Obsidian Border */
+    for (int r = 0; r < 19; r++) {
         int py = my + r;
         if (py < 0 || py >= (int)scr->height) continue;
-        uint16_t row_fill   = cursor_mask[r];
-        uint16_t row_border = cursor_border[r];
+        uint16_t row_body   = shape_mask[r];
+        uint16_t row_border = border_mask[r];
 
         for (int c = 0; c < 16; c++) {
             int px = mx + c;
             if (px < 0 || px >= (int)scr->width) continue;
 
             if ((row_border >> (15 - c)) & 1) {
-                vbe_putpixel(px, py, COLOR_CYAN_GLOW);
-            } else if ((row_fill >> (15 - c)) & 1) {
-                vbe_putpixel(px, py, 0xFFFFFFFF);
+                vbe_putpixel(px, py, 0xFF11141E); /* Obsidian border */
+            } else if ((row_body >> (15 - c)) & 1) {
+                vbe_putpixel(px, py, 0xFFFFFFFF); /* Pure crisp white body */
             }
         }
     }
@@ -491,9 +718,13 @@ static void draw_mouse_cursor(vbe_screen_t* scr, int32_t mx, int32_t my) {
 /* ---------------- Interactive Mouse Event Dispatcher ---------------- */
 
 void compositor_handle_mouse(int32_t mx, int32_t my, bool left, bool right) {
-    (void)right;
-    bool clicked = left && !s_prev_left;
-    s_prev_left = left;
+    bool left_clicked  = left && !s_prev_left;
+    bool right_clicked = right && !s_prev_right;
+    s_prev_left  = left;
+    s_prev_right = right;
+
+    vbe_screen_t* scr = vbe_get_screen();
+    if (!scr) return;
 
     /* Handle Window Dragging */
     if (left && s_drag_win_id != 0) {
@@ -504,21 +735,120 @@ void compositor_handle_mouse(int32_t mx, int32_t my, bool left, bool right) {
                 break;
             }
         }
+        return;
     } else if (!left) {
         s_drag_win_id = 0;
     }
 
-    if (!clicked) return;
+    /* 1. Handle Right-Click Context Menu Trigger */
+    if (right_clicked) {
+        g_context_menu_open = true;
+        g_context_x = mx;
+        g_context_y = my;
+        g_quick_settings_open = false;
+        g_start_menu_open = false;
+        return;
+    }
 
-    vbe_screen_t* scr = vbe_get_screen();
-    if (!scr) return;
+    if (!left_clicked) return;
 
-    /* 1. Check Window Clicks (Topmost down) */
+    /* 2. Check Context Menu Click */
+    if (g_context_menu_open) {
+        uint32_t cm_w = 190;
+        uint32_t cm_h = 145;
+        int32_t  cm_x = g_context_x;
+        int32_t  cm_y = g_context_y;
+        if (cm_x + (int32_t)cm_w > (int32_t)scr->width) cm_x = scr->width - cm_w - 10;
+        if (cm_y + (int32_t)cm_h > (int32_t)scr->height - 50) cm_y = scr->height - 50 - cm_h;
+
+        if (mx >= cm_x && mx <= cm_x + (int32_t)cm_w && my >= cm_y && my <= cm_y + (int32_t)cm_h) {
+            int item = (my - (cm_y + 8)) / 26;
+            if (item == 0) compositor_set_wallpaper((g_active_wallpaper + 1) % 4);
+            else if (item == 1) app_launch_settings();
+            else if (item == 2) app_launch_terminal();
+            else if (item == 3) app_launch_taskmgr();
+            else if (item == 4) { /* Refresh Desktop */ }
+        }
+        g_context_menu_open = false;
+        return;
+    }
+
+    /* 3. Check Quick Settings Panel Click */
+    if (g_quick_settings_open) {
+        uint32_t qs_w = 315;
+        uint32_t qs_h = 300;
+        uint32_t qs_x = scr->width - qs_w - 15;
+        uint32_t qs_y = scr->height - 60 - qs_h;
+
+        if (mx >= (int32_t)qs_x && mx <= (int32_t)(qs_x + qs_w) &&
+            my >= (int32_t)qs_y && my <= (int32_t)(qs_y + qs_h)) {
+
+            /* Toggles */
+            for (int i = 0; i < 5; i++) {
+                uint32_t col = i % 2;
+                uint32_t row = i / 2;
+                uint32_t sw_x = qs_x + 15 + (col * 145);
+                uint32_t sw_y = qs_y + 40 + (row * 36);
+                if (mx >= (int32_t)sw_x && mx <= (int32_t)(sw_x + 135) &&
+                    my >= (int32_t)sw_y && my <= (int32_t)(sw_y + 30)) {
+                    if (i == 0) g_qs_wifi = !g_qs_wifi;
+                    else if (i == 1) g_qs_bt = !g_qs_bt;
+                    else if (i == 2) g_qs_airplane = !g_qs_airplane;
+                    else if (i == 3) g_qs_night_light = !g_qs_night_light;
+                    else if (i == 4) g_qs_battery_saver = !g_qs_battery_saver;
+                    return;
+                }
+            }
+
+            /* Volume slider track */
+            uint32_t sl_track_x = qs_x + 120;
+            uint32_t sl_track_w = 180;
+            if (mx >= (int32_t)sl_track_x && mx <= (int32_t)(sl_track_x + sl_track_w) &&
+                my >= (int32_t)(qs_y + 155) && my <= (int32_t)(qs_y + 185)) {
+                g_qs_volume = ((mx - sl_track_x) * 100) / sl_track_w;
+                if (g_qs_volume > 100) g_qs_volume = 100;
+                return;
+            }
+
+            /* Brightness slider track */
+            uint32_t bri_track_x = qs_x + 145;
+            uint32_t bri_track_w = 155;
+            if (mx >= (int32_t)bri_track_x && mx <= (int32_t)(bri_track_x + bri_track_w) &&
+                my >= (int32_t)(qs_y + 185) && my <= (int32_t)(qs_y + 215)) {
+                g_qs_brightness = ((mx - bri_track_x) * 100) / bri_track_w;
+                if (g_qs_brightness > 100) g_qs_brightness = 100;
+                return;
+            }
+
+            /* Power Buttons */
+            uint32_t py = qs_y + 240;
+            if (my >= (int32_t)py && my <= (int32_t)(py + 24)) {
+                if (mx >= (int32_t)(qs_x + 15) && mx <= (int32_t)(qs_x + 100)) {
+                    /* Sleep */
+                    acpi_enter_s0ix_standby();
+                    return;
+                } else if (mx >= (int32_t)(qs_x + 115) && mx <= (int32_t)(qs_x + 200)) {
+                    /* Restart */
+                    acpi_reboot();
+                    return;
+                } else if (mx >= (int32_t)(qs_x + 215) && mx <= (int32_t)(qs_x + 300)) {
+                    /* Shut Down */
+                    acpi_poweroff();
+                    return;
+                }
+            }
+            return;
+        } else {
+            g_quick_settings_open = false;
+        }
+    }
+
+    /* 4. Check Window Clicks (Topmost down) */
     for (int i = MAX_WINDOWS - 1; i >= 0; i--) {
         window_t* win = &g_windows[i];
         if (!win->active || win->minimized) continue;
 
-        /* Check Titlebar click */
+        /* Titlebar click */
         if (mx >= (int32_t)win->x && mx <= (int32_t)(win->x + win->w) &&
             my >= (int32_t)win->y && my <= (int32_t)(win->y + 26)) {
 
@@ -543,15 +873,22 @@ void compositor_handle_mouse(int32_t mx, int32_t my, bool left, bool right) {
             return;
         }
 
-        /* Check Window Body click to focus */
+        /* Body click */
         if (mx >= (int32_t)win->x && mx <= (int32_t)(win->x + win->w) &&
-            my >= (int32_t)win->y && my <= (int32_t)(win->y + win->h)) {
+            my >= (int32_t)(win->y + 26) && my <= (int32_t)(win->y + win->h)) {
             compositor_set_active_window(win->id);
+
+            /* Interactive window content dispatch */
+            if (kstrcmp(win->title, "airlys-files") == 0) {
+                app_files_click(win, mx, my);
+            } else if (kstrcmp(win->title, "airlys-settings") == 0) {
+                app_settings_click(win, mx, my);
+            }
             return;
         }
     }
 
-    /* 2. Check Taskbar Dock Clicks */
+    /* 5. Check Taskbar Dock Clicks */
     uint32_t bar_h = 44;
     uint32_t bar_y = scr->height - bar_h - 10;
     uint32_t dock_w = 480;
@@ -577,8 +914,7 @@ void compositor_handle_mouse(int32_t mx, int32_t my, bool left, bool right) {
                         if (g_windows[w].active && kstrcmp(g_windows[w].title, "airlys-term") == 0) {
                             g_windows[w].minimized = !g_windows[w].minimized;
                             if (!g_windows[w].minimized) compositor_set_active_window(g_windows[w].id);
-                            found = true;
-                            break;
+                            found = true; break;
                         }
                     }
                     if (!found) app_launch_terminal();
@@ -589,11 +925,21 @@ void compositor_handle_mouse(int32_t mx, int32_t my, bool left, bool right) {
                         if (g_windows[w].active && kstrcmp(g_windows[w].title, "airlys-files") == 0) {
                             g_windows[w].minimized = !g_windows[w].minimized;
                             if (!g_windows[w].minimized) compositor_set_active_window(g_windows[w].id);
-                            found = true;
-                            break;
+                            found = true; break;
                         }
                     }
                     if (!found) app_launch_files();
+                } else if (i == 2) {
+                    /* Code Studio */
+                    bool found = false;
+                    for (int w = 0; w < MAX_WINDOWS; w++) {
+                        if (g_windows[w].active && kstrcmp(g_windows[w].title, "aira-code") == 0) {
+                            g_windows[w].minimized = !g_windows[w].minimized;
+                            if (!g_windows[w].minimized) compositor_set_active_window(g_windows[w].id);
+                            found = true; break;
+                        }
+                    }
+                    if (!found) app_launch_code();
                 } else if (i == 4) {
                     /* Task Manager */
                     bool found = false;
@@ -601,8 +947,7 @@ void compositor_handle_mouse(int32_t mx, int32_t my, bool left, bool right) {
                         if (g_windows[w].active && kstrcmp(g_windows[w].title, "Aira Task Manager") == 0) {
                             g_windows[w].minimized = !g_windows[w].minimized;
                             if (!g_windows[w].minimized) compositor_set_active_window(g_windows[w].id);
-                            found = true;
-                            break;
+                            found = true; break;
                         }
                     }
                     if (!found) app_launch_taskmgr();
@@ -613,16 +958,38 @@ void compositor_handle_mouse(int32_t mx, int32_t my, bool left, bool right) {
                         if (g_windows[w].active && kstrncmp(g_windows[w].title, "Airlys", 6) == 0) {
                             g_windows[w].minimized = !g_windows[w].minimized;
                             if (!g_windows[w].minimized) compositor_set_active_window(g_windows[w].id);
-                            found = true;
-                            break;
+                            found = true; break;
                         }
                     }
                     if (!found) app_launch_search();
+                } else if (i == 6) {
+                    /* Settings */
+                    bool found = false;
+                    for (int w = 0; w < MAX_WINDOWS; w++) {
+                        if (g_windows[w].active && kstrcmp(g_windows[w].title, "airlys-settings") == 0) {
+                            g_windows[w].minimized = !g_windows[w].minimized;
+                            if (!g_windows[w].minimized) compositor_set_active_window(g_windows[w].id);
+                            found = true; break;
+                        }
+                    }
+                    if (!found) app_launch_settings();
                 }
                 return;
             }
         }
     }
+
+    /* 6. Check System Tray Click (Toggles Quick Settings) */
+    uint32_t tray_x = scr->width - 200;
+    if (mx >= (int32_t)tray_x && mx <= (int32_t)(tray_x + 190) &&
+        my >= (int32_t)bar_y && my <= (int32_t)(bar_y + bar_h)) {
+        compositor_toggle_quick_settings();
+        return;
+    }
+
+    /* Click on empty desktop closes Start Menu & Quick Settings */
+    if (g_start_menu_open) g_start_menu_open = false;
+    if (g_quick_settings_open) g_quick_settings_open = false;
 }
 
 /* ---------------- Render Frame Pipeline ---------------- */
@@ -662,9 +1029,15 @@ void compositor_render_frame(void) {
     /* 5. Start Menu Overlay */
     draw_start_menu(scr);
 
-    /* 6. Mouse Cursor Overlay */
+    /* 6. Quick Settings Overlay */
+    draw_quick_settings(scr);
+
+    /* 7. Right-Click Context Menu Overlay */
+    draw_context_menu(scr);
+
+    /* 8. Precision Aerodynamic White Mouse Cursor Overlay */
     draw_mouse_cursor(scr, mouse_get_x(), mouse_get_y());
 
-    /* 7. Push to Screen */
+    /* 9. Push to Physical Linear Framebuffer */
     vbe_swap_buffers();
 }

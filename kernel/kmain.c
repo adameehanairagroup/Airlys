@@ -272,6 +272,7 @@ void kernel_main(uint64_t magic, uint64_t addr) {
     uint64_t last_frame_ticks = 0;
     uint32_t loop_counter = 0;
     for (;;) {
+        mouse_poll(); /* Poll hardware touchpad/mouse EC packets */
         uint64_t current_ticks = timer_get_ticks();
         loop_counter++;
         if (current_ticks > last_frame_ticks + 5 || loop_counter >= 300000) {
