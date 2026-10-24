@@ -63,7 +63,7 @@ void kernel_main(uint64_t magic, uint64_t addr) {
                 uint32_t h       = *(volatile uint32_t*)(tag_ptr + 24);
                 uint8_t  bpp     = *(volatile uint8_t*)(tag_ptr + 28);
 
-                if (fb_phys != 0 && w >= 320 && h >= 200) {
+                if (fb_phys != 0 && fb_phys < (128ULL * 1024 * 1024 * 1024) && w >= 320 && h >= 200) {
                     vbe_set_physical_framebuffer(fb_phys, w, h, pitch, (uint32_t)bpp);
                     vbe_early_boot_splash();
                     break;
@@ -82,7 +82,7 @@ void kernel_main(uint64_t magic, uint64_t addr) {
             uint32_t h       = *(volatile uint32_t*)(addr + 104);
             uint8_t  bpp     = *(volatile uint8_t*)(addr + 108);
 
-            if (fb_phys != 0 && w >= 320 && h >= 200) {
+            if (fb_phys != 0 && fb_phys < (128ULL * 1024 * 1024 * 1024) && w >= 320 && h >= 200) {
                 vbe_set_physical_framebuffer(fb_phys, w, h, pitch, (uint32_t)bpp);
                 vbe_early_boot_splash();
             }

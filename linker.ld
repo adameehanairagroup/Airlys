@@ -15,6 +15,7 @@ SECTIONS
     .text : ALIGN(4K)
     {
         KEEP(*(.multiboot))
+        KEEP(*(.boot))
         *(.text .text.*)
     }
 
@@ -33,8 +34,10 @@ SECTIONS
     /* Uninitialized Data (BSS, Page Tables, Stack) */
     .bss : ALIGN(4K)
     {
+        _bss_start = .;
         *(COMMON)
         *(.bss .bss.*)
+        _bss_end = .;
     }
 
     . = ALIGN(4K);

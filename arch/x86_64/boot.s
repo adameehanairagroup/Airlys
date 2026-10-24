@@ -26,6 +26,14 @@ multiboot2_header:
     .long MB2_LENGTH
     .long MB2_CHECKSUM
 
+    /* Entry Address Tag (Type 3) */
+    .align 8
+    .short 3              /* type = 3 (Entry address) */
+    .short 0              /* flags = 0 */
+    .long 12              /* size = 12 */
+    .long _start          /* entry_addr */
+    .long 0               /* padding to 8-byte boundary */
+
     /* Framebuffer Request Tag (Type 5) - Requests UEFI GOP / VBE native @ 32bpp */
     .align 8
     .short 5              /* type = 5 (Framebuffer) */
@@ -49,7 +57,7 @@ multiboot1_header:
     .long MB1_CHECKSUM
 
 /* ---------------- 32-Bit Entry Point ---------------- */
-.section .text
+.section .boot, "ax"
 .code32
 .global _start
 .type _start, @function
@@ -60,9 +68,20 @@ _start:
     /* Initialize stack */
     movl $stack_top, %esp
 
-    /* Save Multiboot magic & info pointer */
-    movl %eax, %edi
+    /* Save Multiboot magic (EAX) and info pointer (EBX) in non-volatile registers */
+    movl %eax, %ebp
     movl %ebx, %esi
+
+    /* Zero out the entire .bss section (clears page tables, stacks, global state) */
+    movl $_bss_start, %edi
+    movl $_bss_end, %ecx
+    subl %edi, %ecx
+    shrl $2, %ecx           /* Number of 4-byte dwords */
+    xorl %eax, %eax
+    rep stosl
+
+    /* Restore Multiboot magic to EDI */
+    movl %ebp, %edi
 
     /* Check if CPU supports CPUID */
     pushfl
@@ -89,14 +108,15 @@ _start:
     testl $(1 << 29), %edx
     jz no_long_mode
 
-    /* Build identity page tables for the first 8GB using 2MB huge pages */
+    /* Build identity page tables for 128GB using 2MB huge pages */
     /* PML4[0] -> PDPT */
     movl $pml4_table, %eax
     movl $pdpt_table, %ebx
     orl $0x03, %ebx         /* Present + Writable */
     movl %ebx, (%eax)
+    movl $0, 4(%eax)        /* Upper 32 bits = 0 */
 
-    /* PDPT[0..7] -> 8 Page Directories (8 * 1GB = 8GB) */
+    /* PDPT[0..127] -> 128 Page Directories (128 * 1GB = 128GB) */
     movl $pdpt_table, %eax
     movl $page_dir_table, %ebx
     orl $0x03, %ebx
@@ -106,10 +126,10 @@ init_pdpt_loop:
     movl $0, 4(%eax, %ecx, 8)
     addl $4096, %ebx
     incl %ecx
-    cmpl $8, %ecx
+    cmpl $128, %ecx
     jne init_pdpt_loop
 
-    /* Identity map 4096 entries of 2MB = 8GB (0x00000000 .. 0x1FFFFFFFF) */
+    /* Identity map 65536 entries of 2MB = 128GB (0x00000000 .. 0x1FFFFFFFFF) */
     movl $0, %ecx
 map_pd_loop:
     movl $0x200000, %eax    /* 2MB */
@@ -119,7 +139,7 @@ map_pd_loop:
     movl %eax, (%ebx, %ecx, 8)
     movl %edx, 4(%ebx, %ecx, 8)
     incl %ecx
-    cmpl $4096, %ecx
+    cmpl $65536, %ecx
     jne map_pd_loop
 
     /* Load CR3 with physical address of PML4 */
@@ -137,13 +157,13 @@ map_pd_loop:
     orl $(1 << 8), %eax
     wrmsr
 
+    /* Load 64-bit Global Descriptor Table BEFORE enabling paging */
+    lgdt (gdt64_pointer)
+
     /* Enable Paging and Protected Mode in CR0 */
     movl %cr0, %eax
     orl $(1 << 31 | 1 << 0), %eax
     movl %eax, %cr0
-
-    /* Load 64-bit Global Descriptor Table */
-    lgdt (gdt64_pointer)
 
     /* Far jump to 64-bit code segment */
     ljmp $0x08, $long_mode_entry
@@ -200,7 +220,7 @@ pml4_table:
 pdpt_table:
     .skip 4096
 page_dir_table:
-    .skip 32768
+    .skip 524288            /* 128 Page Directories * 4096 = 512 KB = 128GB */
 
 /* Kernel Stack (16KB) */
 .align 16
@@ -213,8 +233,8 @@ stack_top:
 .align 8
 gdt64:
     .quad 0                                 /* Null descriptor */
-    .quad (1<<43) | (1<<44) | (1<<47) | (1<<53) /* 64-bit Code: Executable, Code/Data, Present, Long Mode */
-    .quad (1<<44) | (1<<47) | (1<<41)       /* 64-bit Data: Writable, Code/Data, Present */
+    .quad (1<<41) | (1<<43) | (1<<44) | (1<<47) | (1<<53) /* 64-bit Code: Readable, Executable, Code/Data, Present, Long Mode */
+    .quad (1<<41) | (1<<44) | (1<<47)       /* 64-bit Data: Writable, Code/Data, Present */
 gdt64_pointer:
     .short . - gdt64 - 1
     .quad gdt64
