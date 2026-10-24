@@ -72,11 +72,9 @@ _start:
     movl %eax, %ebp
     movl %ebx, %esi
 
-    /* Zero out the entire .bss section (clears page tables, stacks, global state) */
-    movl $_bss_start, %edi
-    movl $_bss_end, %ecx
-    subl %edi, %ecx
-    shrl $2, %ecx           /* Number of 4-byte dwords */
+    /* Zero out ONLY the PML4 and PDPT page tables (8KB = 2048 dwords) */
+    movl $pml4_table, %edi
+    movl $2048, %ecx
     xorl %eax, %eax
     rep stosl
 
@@ -182,6 +180,9 @@ halt_loop:
 .global long_mode_entry
 .type long_mode_entry, @function
 long_mode_entry:
+    /* Reload GDT in 64-bit mode to guarantee 64-bit canonical GDTR base */
+    lgdt (gdt64_pointer)
+
     /* Reload data segment registers */
     movw $0x10, %ax
     movw %ax, %ds

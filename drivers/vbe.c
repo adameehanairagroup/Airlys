@@ -48,12 +48,17 @@ void vbe_allocate_backbuffer(void) {
 void vbe_early_boot_splash(void) {
     if (!s_screen.initialized || !s_screen.front_buffer) return;
 
-    /* Fill screen with deep obsidian */
+    /* Fill screen with vibrant deep cyber navy & bright glowing cyan border */
     for (uint32_t y = 0; y < s_screen.height; y++) {
         uint8_t* row = ((uint8_t*)s_screen.front_buffer) + (y * s_screen.pitch);
         uint32_t* pixels = (uint32_t*)row;
+        bool is_border_y = (y < 8 || y >= s_screen.height - 8);
         for (uint32_t x = 0; x < s_screen.width; x++) {
-            pixels[x] = COLOR_OBSIDIAN;
+            if (is_border_y || x < 8 || x >= s_screen.width - 8) {
+                pixels[x] = COLOR_CYAN_GLOW;
+            } else {
+                pixels[x] = 0xFF0B1426;
+            }
         }
     }
 
