@@ -36,16 +36,19 @@ jobs:
           # 1. Copy official verified releng profile (includes all verified syslinux, efiboot, systemd-boot structures)
           cp -r /usr/share/archiso/configs/releng/* build_profile/
           
-          # 2. Append KDE Plasma 6 desktop & AMD hardware packages
+          # 2. Prune bloated rescue / VM guest agent packages from releng (Nitro V 15 is a physical gaming laptop)
+          sed -i -E '/^(cloud-init|open-vm-tools|virtualbox-guest-utils-nox|hyperv|qemu-guest-agent|clonezilla|partclone|partimage|testdisk|espeakup|brltty|man-pages|man-db|irssi|lynx|darkhttpd|ddrescue|refind|livecd-sounds|grml-zsh-config)$/d' build_profile/packages.x86_64
+          
+          # 3. Append KDE Plasma 6 desktop & AMD hardware packages
           cat profile/packages.x86_64 >> build_profile/packages.x86_64
           
-          # 3. Overlay our Airlys OS S1 branding, wallpapers, autologin and configs
+          # 4. Overlay our Airlys OS S1 branding, wallpapers, autologin and configs
           cp -r profile/airootfs/* build_profile/airootfs/
           
-          # 4. Apply Airlys OS S1 profiledef
+          # 5. Apply Airlys OS S1 profiledef (xz -Xbcj x86 compression)
           cp -f profile/profiledef.sh build_profile/profiledef.sh
           
-          # 5. Build full production live bootable ISO
+          # 6. Build full production live bootable ISO
           mkarchiso -v -w /mnt/work -o out build_profile/
           ls -lh out/
           cp -v out/*.iso bin/airlys.iso
@@ -64,8 +67,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create v1.0.0-s1 bin/airlys.iso bin/sha256sum.txt \
-            --title "Airlys OS S1 - Official Production Release" \
-            --notes "Airlys OS S1 (KDE Plasma 6 Desktop + Linux Zen 6.x) engineered by Er. Adam Eehan (Aira Group of Technology) & Aira 3 Ultra." \
-            --repo ${{ github.repository }} || \
-          gh release upload v1.0.0-s1 bin/airlys.iso bin/sha256sum.txt --clobber --repo ${{ github.repository }}
+          ISO_SIZE=$(stat -c%s bin/airlys.iso)
+          echo "ISO size is $ISO_SIZE bytes"
+          
+          if [ "$ISO_SIZE" -lt 2100000000 ]; then
+            echo "ISO is under 2GB limit, uploading direct ISO..."
+            gh release create v1.0.0-s1 bin/airlys.iso bin/sha256sum.txt \
+              --title "Airlys OS S1 - Official Production Release" \
+              --notes "Airlys OS S1 (KDE Plasma 6 Desktop + Linux Zen 6.x) engineered by Er. Adam Eehan (Aira Group of Technology) & Aira 3 Ultra." \
+              --repo ${{ github.repository }}
+          else
+            echo "ISO exceeds 2GB limit ($ISO_SIZE bytes), splitting into parts for GitHub Releases..."
+            cd bin
+            split -b 1500M airlys.iso airlys.iso.part-
+            cd ..
+            gh release create v1.0.0-s1 bin/airlys.iso.part-* bin/sha256sum.txt \
+              --title "Airlys OS S1 - Official Production Release" \
+              --notes "Airlys OS S1 (KDE Plasma 6 Desktop + Linux Zen 6.x) engineered by Er. Adam Eehan (Aira Group of Technology) & Aira 3 Ultra." \
+              --repo ${{ github.repository }}
+          fi
