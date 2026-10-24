@@ -60,7 +60,7 @@ void kernel_main(uint64_t magic, uint64_t addr) {
 
             if (tag_type == 0 || tag_size == 0) break;
 
-            if (tag_type == 16) { /* Tag 16: Framebuffer tag */
+            if (tag_type == 8 || tag_type == 16) { /* Tag 8: Multiboot2 Framebuffer Info Tag */
                 uint64_t fb_phys = *(volatile uint64_t*)(tag_ptr + 8);
                 uint32_t pitch   = *(volatile uint32_t*)(tag_ptr + 16);
                 uint32_t w       = *(volatile uint32_t*)(tag_ptr + 20);
@@ -70,6 +70,7 @@ void kernel_main(uint64_t magic, uint64_t addr) {
                 if (fb_phys != 0 && fb_phys < (128ULL * 1024 * 1024 * 1024) && w >= 320 && h >= 200) {
                     vbe_set_physical_framebuffer(fb_phys, w, h, pitch, (uint32_t)bpp);
                     vbe_early_boot_splash();
+                    serial_puts("[AIRLYS] UEFI GOP Framebuffer bound to physical display!\n");
                     break;
                 }
             }

@@ -37,10 +37,10 @@ multiboot2_header:
     /* Framebuffer Request Tag (Type 5) - Requests UEFI GOP / VBE native @ 32bpp */
     .align 8
     .short 5              /* type = 5 (Framebuffer) */
-    .short 0              /* flags = 0 (Required graphics mode) */
+    .short 0              /* flags = 0 */
     .long 20              /* size = 20 bytes */
-    .long 0               /* width = 0 (no preference / native panel) */
-    .long 0               /* height = 0 (no preference / native panel) */
+    .long 1920            /* width = 1920 (FHD Native for Acer Nitro V 15) */
+    .long 1080            /* height = 1080 (FHD Native for Acer Nitro V 15) */
     .long 32              /* depth = 32bpp */
 
     /* End tag */
