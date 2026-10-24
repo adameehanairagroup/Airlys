@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Er. Adam Eehan",
+                "Email": "adameehanaira@gmail.com"
+            }
+        ],
+        "Id": "Airlys",
+        "Name": "Airlys OS S1 Default",
+        "License": "Proprietary",
+        "Version": "1.0"
+    }
+}

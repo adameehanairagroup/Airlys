@@ -1,106 +1,45 @@
-name: Airlys Kernel Build & Verify
+name: Build Airlys OS S1 Production ISO
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build:
-    name: Compile & Link x86_64 Kernel
+  build-iso:
+    name: Build Airlys OS S1 Live ISO (KDE Plasma 6)
     runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged --device=/dev/loop-control
+
     steps:
+      - name: Check Free Disk Space
+        run: df -h
+
       - name: Checkout Source
         uses: actions/checkout@v4
 
-      - name: Install LLVM, Clang & Bootloader Tools
+      - name: Initialize Keyring & Install Archiso
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang lld llvm make file grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools dosfstools
+          pacman-key --init
+          pacman-key --populate archlinux
+          pacman -Sy --noconfirm archlinux-keyring
+          pacman -Syu --noconfirm archiso git
 
-      - name: Build Airlys Kernel
+      - name: Build Airlys OS S1 Live ISO
         run: |
-          make clean
-          make
+          mkdir -p /mnt/work out bin
+          mkarchiso -v -w /mnt/work -o out ./profile
+          ls -lh out/
+          cp -v out/*.iso bin/airlys.iso
+          sha256sum bin/airlys.iso > bin/sha256sum.txt
 
-      - name: Verify ELF Executable
-        run: |
-          file bin/airlys.elf
-          llvm-readelf -h bin/airlys.elf
-
-      - name: Build Bootable Live ISO (Dual UEFI + BIOS Hybrid GRUB2)
-        run: |
-          chmod +x scripts/build_iso.sh
-          ./scripts/build_iso.sh
-          ls -lh bin/
-          file bin/airlys.iso
-
-      - name: Verify Live Boot in QEMU (Pure UEFI OVMF & Live Screen Capture)
-        run: |
-          sudo apt-get install -y qemu-system-x86 ovmf imagemagick
-          echo "=== 1. Testing Pure UEFI Boot with OVMF Firmware ==="
-          
-          # Find OVMF firmware
-          OVMF_PATH=""
-          if [ -f /usr/share/ovmf/OVMF.fd ]; then
-            OVMF_PATH="/usr/share/ovmf/OVMF.fd"
-          elif [ -f /usr/share/OVMF/OVMF_CODE.fd ]; then
-            OVMF_PATH="/usr/share/OVMF/OVMF_CODE.fd"
-          fi
-          echo "Using OVMF: $OVMF_PATH"
-          
-          # Launch QEMU with UEFI firmware, serial capture, and QMP
-          qemu-system-x86_64 ${OVMF_PATH:+-bios "$OVMF_PATH"} -cdrom bin/airlys.iso -m 2048 \
-            -serial file:serial.log \
-            -qmp unix:/tmp/qmp.sock,server,nowait \
-            -display none &
-          QEMU_PID=$!
-          
-          sleep 12
-          
-          python3 - << 'EOF'
-          import socket, time
-          try:
-              s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-              s.connect('/tmp/qmp.sock')
-              s.recv(1024)
-              s.sendall(b'{"execute":"qmp_capabilities"}\n')
-              s.recv(1024)
-              s.sendall(b'{"execute":"screendump","arguments":{"filename":"/tmp/screenshot.ppm"}}\n')
-              s.recv(1024)
-              s.close()
-              print(" [QMP] Screenshot dumped successfully!")
-          except Exception as e:
-              print(f" [QMP] Screenshot notice: {e}")
-          EOF
-          
-          kill -9 $QEMU_PID || true
-          
-          echo "=================================================="
-          echo "=== KERNEL BOOT SERIAL OUTPUT FROM UEFI RUN ==="
-          echo "=================================================="
-          cat serial.log || true
-          echo "=================================================="
-          
-          if [ -f /tmp/screenshot.ppm ]; then
-            convert /tmp/screenshot.ppm boot_screenshot.png
-            ls -lh boot_screenshot.png
-          fi
-          
-          grep -q "Kernel Main entered in 64-bit Long Mode" serial.log || {
-            echo "ERROR: Kernel did not reach 64-bit Long Mode under UEFI!"
-            exit 1
-          }
-          echo " [SUCCESS] Kernel booted and executed in Pure 64-bit UEFI Long Mode verified!"
-
-      - name: Upload Bootable Airlys ISO & Kernel Artifacts
+      - name: Upload Airlys OS S1 ISO Artifact
         uses: actions/upload-artifact@v4
         with:
           name: airlys-live-bootable-iso
           path: |
             bin/airlys.iso
-            bin/airlys.elf
-            serial.log
-            boot_screenshot.png
+            bin/sha256sum.txt
           retention-days: 14

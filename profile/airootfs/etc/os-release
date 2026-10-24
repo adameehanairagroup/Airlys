@@ -1,0 +1,11 @@
+NAME="Airlys OS"
+PRETTY_NAME="Airlys OS S1"
+ID=airlys
+ID_LIKE=arch
+BUILD_ID=s1
+ANSI_COLOR="0;36"
+HOME_URL="https://github.com/adameehanairagroup/AirlysOS"
+DOCUMENTATION_URL="https://github.com/adameehanairagroup/AirlysOS"
+SUPPORT_URL="https://github.com/adameehanairagroup/AirlysOS/issues"
+BUG_REPORT_URL="https://github.com/adameehanairagroup/AirlysOS/issues"
+LOGO=airlys-logo

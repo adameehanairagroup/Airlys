@@ -1,0 +1,12 @@
+[Unit]
+Description=Airlys OS S1 First Boot Initialization
+Before=sddm.service
+ConditionFirstBoot=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/airlys-firstrun.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

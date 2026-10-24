@@ -1,0 +1,6 @@
+[General]
+ColorScheme=BreezeDark
+
+[KDE]
+widgetStyle=Breeze
+LookAndFeelPackage=org.kde.breezedark.desktop
