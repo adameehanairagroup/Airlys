@@ -46,10 +46,23 @@ jobs:
           # 3. Append KDE Plasma 6 desktop & AMD hardware packages
           cat profile/packages.x86_64 >> build_profile/packages.x86_64
           
-          # 4. Overlay our Airlys OS S1 branding, wallpapers, autologin and configs
+          # 4. Brand bootloader menus with Airlys OS S1 (remove all third party names)
+          find build_profile/efiboot build_profile/syslinux -type f -exec sed -i \
+            -e 's/Arch Linux install medium/Airlys OS S1 Live \& Installer/g' \
+            -e 's/Arch Linux/Airlys OS S1/g' \
+            -e 's/archlinux/airlys/g' \
+            -e 's/Archiso/Airlys OS/g' {} +
+          
+          # 5. Enable Graphical Desktop Target & SDDM Display Manager (ensures direct boot to KDE GUI!)
+          mkdir -p build_profile/airootfs/etc/systemd/system/graphical.target.wants/
+          ln -sf /usr/lib/systemd/system/graphical.target build_profile/airootfs/etc/systemd/system/default.target
+          ln -sf /usr/lib/systemd/system/sddm.service build_profile/airootfs/etc/systemd/system/display-manager.service
+          ln -sf /usr/lib/systemd/system/sddm.service build_profile/airootfs/etc/systemd/system/graphical.target.wants/sddm.service
+          
+          # 6. Overlay our Airlys OS S1 branding, wallpapers, autologin and configs
           cp -r profile/airootfs/* build_profile/airootfs/
           
-          # 5. Apply Airlys OS S1 profiledef (xz -Xbcj x86 compression)
+          # 7. Apply Airlys OS S1 profiledef (xz -Xbcj x86 compression)
           cp -f profile/profiledef.sh build_profile/profiledef.sh
           
           # 6. Build full production live bootable ISO

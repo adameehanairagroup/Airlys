@@ -2,6 +2,9 @@ name: Capture Airlys OS S1 Live Boot Screenshot
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Build Airlys OS S1 Production ISO"]
+    types: [completed]
   push:
     paths:
       - '.github/workflows/screenshot.yml'
@@ -43,13 +46,13 @@ jobs:
             KVM_OPTS="-enable-kvm -cpu host"
           fi
           
-          echo "Launching QEMU with Airlys OS S1 Live ISO..."
+          echo "Launching QEMU with Airlys OS S1 Live ISO and VirtIO VGA..."
           qemu-system-x86_64 $KVM_OPTS \
             -m 4096 \
             -smp 2 \
             -cdrom bin/airlys.iso \
             -boot d \
-            -vga std \
+            -vga virtio \
             -display none \
             -qmp unix:/tmp/qemu/qmp.sock,server,nowait &
           QEMU_PID=$!
@@ -57,20 +60,23 @@ jobs:
           
           sleep 2
           
-          # Capture 1: Bootloader screen (at 8s)
-          sleep 8
+          # Capture 1: Bootloader menu screen (at 6s)
+          sleep 6
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/01_bootloader.ppm
           
+          # Send Enter key to immediately launch Airlys OS S1
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock enter
+          
           # Capture 2: Systemd Kernel Boot (at 35s)
-          sleep 25
+          sleep 30
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/02_kernel_boot.ppm
           
-          # Capture 3: Desktop Environment Session (at 80s)
-          sleep 45
+          # Capture 3: Desktop Environment Loading (at 85s)
+          sleep 50
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/03_airlys_desktop.ppm
           
-          # Capture 4: Fully Settled Desktop (at 110s)
-          sleep 30
+          # Capture 4: Fully Settled Desktop with Wallpaper & Dock (at 145s)
+          sleep 60
           python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/04_airlys_desktop_settled.ppm
           
           kill -9 $QEMU_PID || true

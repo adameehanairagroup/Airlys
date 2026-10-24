@@ -1,6 +1,7 @@
 [Unit]
 Description=Airlys OS S1 First Boot Initialization
-Before=sddm.service
+Before=sddm.service display-manager.service
+RequiredBy=sddm.service display-manager.service
 ConditionFirstBoot=no
 
 [Service]
@@ -9,4 +10,4 @@ ExecStart=/usr/local/bin/airlys-firstrun.sh
 RemainAfterExit=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target multi-user.target

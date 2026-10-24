@@ -4,6 +4,22 @@ import time
 import socket
 import json
 
+def qmp_send_enter(sock_path):
+    try:
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.settimeout(10)
+        s.connect(sock_path)
+        s.recv(4096)
+        s.sendall(json.dumps({"execute": "qmp_capabilities"}).encode() + b"\n")
+        s.recv(4096)
+        cmd = json.dumps({"execute": "send-key", "arguments": {"keys": [{"type": "qcode", "data": "ret"}]}})
+        s.sendall(cmd.encode() + b"\n")
+        s.recv(4096)
+        s.close()
+        print("Sent Enter key to boot menu successfully.")
+    except Exception as e:
+        print(f"Failed to send Enter key: {e}")
+
 def qmp_screendump(sock_path, out_file):
     try:
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -22,8 +38,11 @@ def qmp_screendump(sock_path, out_file):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: capture_qemu.py <qmp_socket_path> <output_ppm_path>")
+        print("Usage: capture_qemu.py <qmp_socket_path> <action_or_output>")
         sys.exit(1)
     sock = sys.argv[1]
-    out = sys.argv[2]
-    qmp_screendump(sock, out)
+    arg = sys.argv[2]
+    if arg == "enter":
+        qmp_send_enter(sock)
+    else:
+        qmp_screendump(sock, arg)
