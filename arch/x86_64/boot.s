@@ -37,7 +37,7 @@ multiboot2_header:
     /* Framebuffer Request Tag (Type 5) - Requests UEFI GOP / VBE native @ 32bpp */
     .align 8
     .short 5              /* type = 5 (Framebuffer) */
-    .short 0              /* flags = 0 */
+    .short 1              /* flags = 1 (Optional - graceful fallback if exact 1080p unavailable) */
     .long 20              /* size = 20 bytes */
     .long 1920            /* width = 1920 (FHD Native for Acer Nitro V 15) */
     .long 1080            /* height = 1080 (FHD Native for Acer Nitro V 15) */
@@ -106,7 +106,7 @@ _start:
     testl $(1 << 29), %edx
     jz no_long_mode
 
-    /* Build identity page tables for 128GB using 2MB huge pages */
+    /* Build identity page tables for 512GB using 2MB huge pages */
     /* PML4[0] -> PDPT */
     movl $pml4_table, %eax
     movl $pdpt_table, %ebx
@@ -114,7 +114,7 @@ _start:
     movl %ebx, (%eax)
     movl $0, 4(%eax)        /* Upper 32 bits = 0 */
 
-    /* PDPT[0..127] -> 128 Page Directories (128 * 1GB = 128GB) */
+    /* PDPT[0..511] -> 512 Page Directories (512 * 1GB = 512GB) */
     movl $pdpt_table, %eax
     movl $page_dir_table, %ebx
     orl $0x03, %ebx
@@ -124,10 +124,10 @@ init_pdpt_loop:
     movl $0, 4(%eax, %ecx, 8)
     addl $4096, %ebx
     incl %ecx
-    cmpl $128, %ecx
+    cmpl $512, %ecx
     jne init_pdpt_loop
 
-    /* Identity map 65536 entries of 2MB = 128GB (0x00000000 .. 0x1FFFFFFFFF) */
+    /* Identity map 262144 entries of 2MB = 512GB (0x00000000 .. 0x7FFFFFFFFF) */
     movl $0, %ecx
 map_pd_loop:
     movl $0x200000, %eax    /* 2MB */
@@ -137,7 +137,7 @@ map_pd_loop:
     movl %eax, (%ebx, %ecx, 8)
     movl %edx, 4(%ebx, %ecx, 8)
     incl %ecx
-    cmpl $65536, %ecx
+    cmpl $262144, %ecx
     jne map_pd_loop
 
     /* Load CR3 with physical address of PML4 */
@@ -221,7 +221,7 @@ pml4_table:
 pdpt_table:
     .skip 4096
 page_dir_table:
-    .skip 524288            /* 128 Page Directories * 4096 = 512 KB = 128GB */
+    .skip 2097152           /* 512 Page Directories * 4096 = 2MB = 512GB */
 
 /* Kernel Stack (16KB) */
 .align 16

@@ -13,6 +13,11 @@ static uint32_t s_console_y = 60;
 #define VBE_MAX_PIXELS (1024 * 768)
 static uint32_t s_pixel_buffer[VBE_MAX_PIXELS];
 
+static inline void vbe_flush_cache(void) {
+    /* Forcibly flush CPU L1/L2/L3 cache lines to GPU physical VRAM (essential for Zen 3+ AMD Ryzen APUs) */
+    __asm__ volatile ("wbinvd" ::: "memory");
+}
+
 bool vbe_is_hardware_framebuffer(void) {
     return s_is_hardware;
 }
@@ -97,6 +102,8 @@ void vbe_early_boot_splash(void) {
         }
         x0 += 8;
     }
+
+    vbe_flush_cache();
 }
 
 void vbe_console_clear(void) {
@@ -110,6 +117,7 @@ void vbe_console_clear(void) {
     }
     s_console_x = 24;
     s_console_y = 60;
+    vbe_flush_cache();
 }
 
 void vbe_console_putchar(char c, uint32_t color) {
@@ -341,4 +349,5 @@ void vbe_swap_buffers(void) {
             src += row_bytes;
         }
     }
+    vbe_flush_cache();
 }

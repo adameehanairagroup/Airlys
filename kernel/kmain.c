@@ -67,7 +67,7 @@ void kernel_main(uint64_t magic, uint64_t addr) {
                 uint32_t h       = *(volatile uint32_t*)(tag_ptr + 24);
                 uint8_t  bpp     = *(volatile uint8_t*)(tag_ptr + 28);
 
-                if (fb_phys != 0 && fb_phys < (128ULL * 1024 * 1024 * 1024) && w >= 320 && h >= 200) {
+                if (fb_phys != 0 && fb_phys < (512ULL * 1024 * 1024 * 1024) && w >= 320 && h >= 200) {
                     vbe_set_physical_framebuffer(fb_phys, w, h, pitch, (uint32_t)bpp);
                     vbe_early_boot_splash();
                     serial_puts("[AIRLYS] UEFI GOP Framebuffer bound to physical display!\n");
@@ -87,10 +87,31 @@ void kernel_main(uint64_t magic, uint64_t addr) {
             uint32_t h       = *(volatile uint32_t*)(addr + 104);
             uint8_t  bpp     = *(volatile uint8_t*)(addr + 108);
 
-            if (fb_phys != 0 && fb_phys < (128ULL * 1024 * 1024 * 1024) && w >= 320 && h >= 200) {
+            if (fb_phys != 0 && fb_phys < (512ULL * 1024 * 1024 * 1024) && w >= 320 && h >= 200) {
                 vbe_set_physical_framebuffer(fb_phys, w, h, pitch, (uint32_t)bpp);
                 vbe_early_boot_splash();
             }
+        }
+    }
+
+    /* Fallback: Direct PCI Bus Display Controller probe if GOP not provided by bootloader */
+    if (!vbe_is_hardware_framebuffer()) {
+        for (uint16_t bus = 0; bus < 8; bus++) {
+            for (uint8_t slot = 0; slot < 32; slot++) {
+                uint16_t vid = pci_read16((uint8_t)bus, slot, 0, 0x00);
+                if (vid == 0xFFFF || vid == 0x0000) continue;
+                uint8_t class_id = pci_read8((uint8_t)bus, slot, 0, 0x0B);
+                if (class_id == PCI_CLASS_DISPLAY) {
+                    uint32_t bar0 = pci_read32((uint8_t)bus, slot, 0, 0x10) & 0xFFFFFFF0;
+                    if (bar0 != 0) {
+                        vbe_set_physical_framebuffer((uint64_t)bar0, 1920, 1080, 1920 * 4, 32);
+                        vbe_early_boot_splash();
+                        serial_puts("[AIRLYS] PCI Display Controller Framebuffer bound!\n");
+                        break;
+                    }
+                }
+            }
+            if (vbe_is_hardware_framebuffer()) break;
         }
     }
 
