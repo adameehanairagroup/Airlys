@@ -3,6 +3,10 @@ name: Build Airlys OS S1 Production ISO
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - '.github/workflows/screenshot.yml'
+      - 'scripts/**'
+      - 'README.md'
   workflow_dispatch:
 
 permissions:

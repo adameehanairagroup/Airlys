@@ -1,0 +1,99 @@
+name: Capture Airlys OS S1 Live Boot Screenshot
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/screenshot.yml'
+      - 'scripts/capture_qemu.py'
+
+permissions:
+  contents: write
+
+jobs:
+  screenshot:
+    name: Boot Airlys OS S1 & Capture Live Desktop
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Install QEMU & ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 imagemagick
+
+      - name: Download Built Airlys OS S1 ISO Artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p bin
+          echo "Downloading split ISO parts from release v1.0.0-s1..."
+          gh release download v1.0.0-s1 -p "airlys.iso.part-*" --dir bin --repo ${{ github.repository }}
+          cat bin/airlys.iso.part-* > bin/airlys.iso
+          ls -lh bin/airlys.iso
+
+      - name: Boot Airlys OS S1 and Capture Screenshots
+        run: |
+          mkdir -p /tmp/qemu /tmp/captures screenshots
+          
+          KVM_OPTS="-cpu max"
+          if [ -w /dev/kvm ]; then
+            echo "Hardware KVM acceleration available!"
+            KVM_OPTS="-enable-kvm -cpu host"
+          fi
+          
+          echo "Launching QEMU with Airlys OS S1 Live ISO..."
+          qemu-system-x86_64 $KVM_OPTS \
+            -m 4096 \
+            -smp 2 \
+            -cdrom bin/airlys.iso \
+            -boot d \
+            -vga std \
+            -display none \
+            -qmp unix:/tmp/qemu/qmp.sock,server,nowait &
+          QEMU_PID=$!
+          echo "QEMU PID is $QEMU_PID"
+          
+          sleep 2
+          
+          # Capture 1: Bootloader screen (at 8s)
+          sleep 8
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/01_bootloader.ppm
+          
+          # Capture 2: Systemd Kernel Boot (at 35s)
+          sleep 25
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/02_kernel_boot.ppm
+          
+          # Capture 3: Desktop Environment Session (at 80s)
+          sleep 45
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/03_airlys_desktop.ppm
+          
+          # Capture 4: Fully Settled Desktop (at 110s)
+          sleep 30
+          python3 scripts/capture_qemu.py /tmp/qemu/qmp.sock /tmp/captures/04_airlys_desktop_settled.ppm
+          
+          kill -9 $QEMU_PID || true
+          
+          echo "Converting captures to PNG..."
+          for ppm in /tmp/captures/*.ppm; do
+            if [ -f "$ppm" ]; then
+              base=$(basename "$ppm" .ppm)
+              convert "$ppm" "screenshots/${base}.png"
+              echo "Created screenshots/${base}.png"
+            fi
+          done
+          ls -lh screenshots/
+
+      - name: Upload Screenshots Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: airlys-desktop-screenshots
+          path: screenshots/*.png
+          retention-days: 14
+
+      - name: Attach Screenshots to GitHub Release v1.0.0-s1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v1.0.0-s1 screenshots/*.png --clobber --repo ${{ github.repository }}
