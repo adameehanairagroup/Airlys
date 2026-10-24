@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-iso:
     name: Build Airlys OS S1 Live ISO (KDE Plasma 6)
@@ -25,7 +28,7 @@ jobs:
           pacman-key --init
           pacman-key --populate archlinux
           pacman -Sy --noconfirm archlinux-keyring
-          pacman -Syu --noconfirm archiso git
+          pacman -Syu --noconfirm archiso git github-cli
 
       - name: Build Airlys OS S1 Live ISO
         run: |
@@ -56,3 +59,13 @@ jobs:
             bin/airlys.iso
             bin/sha256sum.txt
           retention-days: 14
+
+      - name: Publish to GitHub Release v1.0.0-s1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v1.0.0-s1 bin/airlys.iso bin/sha256sum.txt \
+            --title "Airlys OS S1 - Official Production Release" \
+            --notes "Airlys OS S1 (KDE Plasma 6 Desktop + Linux Zen 6.x) engineered by Er. Adam Eehan (Aira Group of Technology) & Aira 3 Ultra." \
+            --repo ${{ github.repository }} || \
+          gh release upload v1.0.0-s1 bin/airlys.iso bin/sha256sum.txt --clobber --repo ${{ github.repository }}
